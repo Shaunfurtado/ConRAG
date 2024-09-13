@@ -1,0 +1,28 @@
+# Build artifacts
+dist/
+build/
+
+# Test files
+coverage/
+test/
+
+# IDE-specific files
+.vscode/
+*.vscode/
+.DS_Store
+
+# Editor-specific files
+.editorconfig
+*.editorconfig
+viminfo
+
+# Auto-generated files
+node_modules/
+yarn.lock
+package-lock.json
+.env
+
+# Miscellaneous files
+*.log
+*.temp
+*.bak
