@@ -17,6 +17,8 @@ To read more about using these font, please visit the Next.js documentation:
 - App Directory: https://nextjs.org/docs/app/building-your-application/optimizing/fonts
 - Pages Directory: https://nextjs.org/docs/pages/building-your-application/optimizing/fonts
 **/
+
+"use client";
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -24,90 +26,57 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import Image from "next/image"
+import { useState } from "react"
+import { ScrollArea } from "@radix-ui/react-scroll-area";
 
 export function RagUI() {
+  const [conversations, setConversations] = useState([
+    { id: 1, title: "Conversation 1" },
+    { id: 2, title: "Conversation 2" },
+    { id: 3, title: "Conversation 3" },
+  ])
+
+  const [activeConversation, setActiveConversation] = useState(1)
+  const [messages, setMessages] = useState([
+    { id: 1, sender: "user", content: "Hello, ConRAG!" },
+    { id: 2, sender: "bot", content: "Hi there! How can I assist you today?" },
+  ])
+
   return (
+    // Intial div tag
     <div className="flex h-screen w-full">
       <div className="flex flex-col border-r bg-background p-4 md:w-72">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Conversations</h2>
-          <Button variant="ghost" size="icon">
-            <PlusIcon className="h-5 w-5" />
-          </Button>
-        </div>
-        <div className="flex-1 overflow-auto">
-          <Collapsible className="space-y-2">
-            <CollapsibleTrigger className="flex items-center justify-between rounded-md bg-muted px-4 py-3 text-sm font-medium">
-              <div>History</div>
-              <ChevronDownIcon className="h-4 w-4" />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-2 px-4 pb-4">
-              <div className="flex items-start gap-4">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="/placeholder-user.jpg" alt="Avatar" />
-                  <AvatarFallback>JD</AvatarFallback>
-                </Avatar>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className="font-medium">Test 1</div>
-                    <div className="text-xs text-muted-foreground">10:30 AM</div>
-                  </div>
-                  <div className="text-sm">
-                    Hey team, History of the first conversation.
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="/placeholder-user.jpg" alt="Avatar" />
-                  <AvatarFallback>JS</AvatarFallback>
-                </Avatar>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className="font-medium">Test 2</div>
-                    <div className="text-xs text-muted-foreground">10:35 AM</div>
-                  </div>
-                  <div className="text-sm">
-                    Sounds good, History of second conversation.
-                  </div>
-                </div>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-          <Collapsible className="space-y-2">
-            <CollapsibleTrigger className="flex items-center justify-between rounded-md bg-muted px-4 py-3 text-sm font-medium">
-              <div>Settings</div>
-              <ChevronDownIcon className="h-4 w-4" />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-2 px-4 pb-4">
-              <div className="flex items-start gap-4">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="/placeholder-user.jpg" alt="Avatar" />
-                  <AvatarFallback>SA</AvatarFallback>
-                </Avatar>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className="font-medium">Tuning</div>
-                    <div className="text-xs text-muted-foreground">2:00 PM</div>
-                  </div>
-                  <div className="text-sm">
-                    Hey everyone, Here Toggles for all the fearures. and For Fine tuning the features.
-                  </div>
-                </div>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+      <div className="w-64 border-r border-gray-300 shadow shadow-gray-300/50">
+        <div className="p-4">
+          <h2 className="text-2xl font-bold mb-4 ">Conversations</h2>
+          <ScrollArea className="h-[calc(100vh-8rem)]">
+            {conversations.map((conv) => (
+              <Button
+                key={conv.id}
+                variant={activeConversation === conv.id ? "secondary" : "ghost"}
+                className="w-full justify-start mb-2 border-gray-300 shadow-sm bg-gray-50 shadow-lg shadow-gray-300/50"
+                onClick={() => setActiveConversation(conv.id)}
+              >
+                {conv.title}
+              </Button>
+            ))}
+          </ScrollArea>
         </div>
       </div>
+      </div>
+      
       <div className="flex-1 flex flex-col">
-        <div className="border-b bg-background p-4">
-          <Tabs defaultValue="chat">
+        <div className="bg-background shadow p-4">
+        <h1 className="text-center text-3xl font-bold ">🚀 Let's Start the Great Conversation!</h1>
+        <Tabs defaultValue="chat" >
+          <div  className="w-full sm:w-3/4 md:w-1/2 lg:w-1/3 mx-auto flex flex-col p-3  transition-shadow duration-300 focus:outline-none focus:ring">
             <TabsList>
               <TabsTrigger value="chat">Chat</TabsTrigger>
               <TabsTrigger value="character">Character</TabsTrigger>
             </TabsList>
+          </div>
             <TabsContent value="chat">
-              <div className="flex flex-col h-[calc(100vh-64px)]">
+              <div className="flex flex-col h-[calc(100vh-64px)] shadow">
                 <div className="flex-1 overflow-auto p-4">
                   <div className="flex items-start gap-4">
                     <Avatar className="h-8 w-8">
