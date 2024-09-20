@@ -1,0 +1,55 @@
+PS C:\Apps\codes\Mail-Assistant> npm run dev
+
+> mail-assistant@1.0.0 dev
+> ts-node src/app.ts
+
+(node:22184) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Server is running at http://localhost:8080
+Please authenticate by visiting http://localhost:8080/auth
+No saved credentials found.
+No saved credentials found. Please authenticate at /auth
+Received authorization code: 4/0AQlEd8wgptMjVKERAlqC5TeyQ_sJxnWj4jgXuHqujXCU4wkG_LO-X9Y9Y_vIErUPhkbnKQ
+Tokens retrieved successfully: {
+  access_token: 'ya29.a0AcM612ybwaw_EvH0mzyisH6to9Ik53MUzL8trke_yQjzDD1nLo8gkw4dTo9hXNINugGWOw62nFXbkKBVLnb0jTqr1TNt25olKLcnSmUzkuJlqhAVJxmGtLw5_51Mkz090PS9z6nSQfV8h-Nz1_LuWaGZJGtuzRZFeiFweYKOaCgYKAcgSARISFQHGX2MiiL6xMJHFQaQFG5Duvj98uw0175',
+  refresh_token: '1//0gQpABVp1ui22CgYIARAAGBASNwF-L9Irkamc5ygw57hFoy2VrUfD2KDHCl7VV3gQwwLonuusiKbL4xpvnfltx63L6ReJWX1ji4M',
+  scope: 'https://www.googleapis.com/auth/gmail.modify',
+  token_type: 'Bearer',
+  expiry_date: 1726066562474
+}
+Email with ID 191e07bf1e875634 processed successfully.
+
+Processing email: {
+  id: '191e07bf1e875634',
+  threadId: '191e07bf1e875634',
+  labelIds: [ 'UNREAD', 'CATEGORY_PERSONAL', 'INBOX' ],
+  snippet: 'Hi Alex, We&#39;re excited to invite you to the Future of Tech Summit, taking place on October 15th at 10 AM in Silicon Valley. We believe this event will be a valuable opportunity to network with',
+  payload: {
+    partId: '',
+    mimeType: 'multipart/alternative',
+    filename: '',
+    headers: [
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object]
+    ],
+    body: { size: 0 },
+    parts: [ [Object], [Object] ]
+  },
+  sizeEstimate: 6248,
+  historyId: '20156',
+  internalDate: '1726048090000'
+}
+Email with ID 191e07b1fc11cf55 processed successfully.
+Email with ID 191e07aa0ad79d15 processed successfully.
+Email with ID 191e05de7092e029 processed successfully.
+Email with ID 191e05d4535a57a6 processed successfully.
+Email classification result: Interested
+Email classified as: Interested
+Generated reply: Subject: Re: Invitation to Future of Tech Summit
+

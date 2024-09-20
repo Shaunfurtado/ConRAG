@@ -1,0 +1,391 @@
+// src/controllers/emailController.ts
+import { getTokens } from '../services/googleAuth';
+import { addEmailJob } from '../queues/emailQueue';
+
+export const handleGoogleCallback = async (req: any , res: any) => {
+  const { code } = req.query;
+  const tokens = await getTokens(code);
+  await addEmailJob({ tokens });
+  res.send('Google account connected and email processing queued');
+};
+// src/controllers/gmailController.ts
+import { Request, Response } from 'express';
+import { listEmails, getEmailContent } from '../services/gmailService';
+import { addEmailJob } from '../queues/emailQueue';
+import { loadSavedCredentialsIfExist } from '../services/googleAuth';
+
+export const processEmails = async (req: Request, res: Response) => {
+  if (!loadSavedCredentialsIfExist()) {
+    if (res.redirect) {
+      res.redirect('/auth');
+    } else {
+      console.log('No saved credentials found. Please authenticate at /auth');
+    }
+    return;
+  }
+  try {
+    const emails = await listEmails();
+    
+    for (const email of emails) {
+      if (email.id) {
+        try {
+          const { emailBody, emailData } = await getEmailContent(email.id);
+          await addEmailJob({ emailBody, emailData });
+          console.log(`Email with ID ${email.id} processed successfully.`);
+        } catch (emailError) {
+          console.error(`Error processing email with ID ${email.id}:`, emailError);
+        }
+      } else {
+        console.log(`Skipping email with invalid ID: ${email.id}`);
+      }
+    }
+    if (res.send) {
+      res.send('Emails queued for processing');
+    }
+  } catch (err) {
+    console.error('Error fetching email list:', err);
+  }
+};
+// src/queues/emailQueue.ts
+import { Queue, Worker } from 'bullmq';
+import dotenv from 'dotenv';
+import IoRedis from 'ioredis';
+dotenv.config();
+
+export const connection = new IoRedis({
+  host: process.env.REDIS_HOST,
+  port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT) : undefined,
+  maxRetriesPerRequest: null,
+});
+
+const emailQueue = new Queue('email-processing', {
+  connection,
+});
+
+const worker = new Worker('email-processing', async (job) => {
+  const { emailBody, emailData } = job.data;
+  console.log('Processing email:', emailData);
+}, {
+  connection,
+  limiter: {
+    max: 1,
+    duration: 10000, // Time window in milliseconds (10 seconds)
+  },
+});
+
+worker.on('completed', (job) => {
+  console.log(`Job with id ${job.id} has been completed`);
+});
+
+worker.on('failed', (job, err) => {
+  if (job) {
+    console.error(`Job with id ${job.id} has failed with error ${err.message}`);
+  } else {
+    console.error(`Job has failed with error ${err.message}`);
+  }
+});
+
+export const addEmailJob = async (emailData: any) => {
+  await emailQueue.add('process-email', emailData);
+};
+// src/queues/emailWorker.ts
+import { Worker } from 'bullmq';
+import { analyzeEmailContext, generateReply } from '../services/openAiService';
+import { sendEmailReply } from '../services/gmailService';
+
+const emailWorker = new Worker('email-processing', async (job) => {
+  const { emailBody, emailData } = job.data;
+
+  // Analyze the email's context with OpenAI
+  const label = await analyzeEmailContext(emailBody);
+  console.log(`Email classified as: ${label}`);
+
+  // Generate an appropriate reply
+  const replyMessage = await generateReply(emailBody, label);
+  console.log(`Generated reply: ${replyMessage}`);
+
+  // Send reply using Gmail API
+  await sendEmailReply(emailData, replyMessage);
+
+  console.log(`Reply sent: ${replyMessage}`);
+});
+// src/services/openAiService.ts
+import OpenAI from "openai";
+import dotenv from "dotenv";
+dotenv.config();
+
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+export const analyzeEmailContext = async (emailContent: string) => {
+  try {
+    const stream = await client.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content:
+            "Analyze the email content and return only the classification category label: 'Interested', 'Not-Interested', or 'More-Information'.",
+        },
+        { role: "user", content: emailContent },
+      ],
+      max_tokens: 100,
+      stream: true,
+    });
+
+    let result = "";
+    for await (const chunk of stream) {
+      result += chunk.choices[0]?.delta?.content || "";
+    }
+    return result.trim();
+  } catch (error) {
+    console.error("Error analyzing email context:", error);
+  }
+};
+
+export const generateReply = async (emailContent: string, label: string) => {
+  let context = "";
+
+  switch (label) {
+    case "Interested":
+      context =
+        "Write a reply to this email expressing interest in a demo call. Indicating that the user is interested in further information. Suggest a time slot for the call if necessary.";
+      break;
+    case "Not Interested":
+      context =
+        "Respond politely to this email, indicating that the user is not interested in further information.";
+      break;
+    case "More Information":
+      context =
+        "Provide additional information about the product or service in response to this email. Ask if the user has any other questions.";
+      break;
+    default:
+      context =
+        "Write a generic reply to this email, thanking the user for their interest.";
+  }
+  try {
+    const stream = await client.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: context },
+        { role: "user", content: emailContent },
+      ],
+      max_tokens: 100,
+      stream: true,
+    });
+
+    let result = "";
+    for await (const chunk of stream) {
+      result += chunk.choices[0]?.delta?.content || "";
+    }
+    return result.trim();
+  } catch (error) {
+    console.error("Error generating reply:", error);
+  }
+};
+// src/app.ts
+import express from 'express';
+import { processEmails } from './controllers/gmailController';
+import { CronJob } from 'cron';
+import { Request, Response } from 'express';
+import { loadSavedCredentialsIfExist, getAuthUrl, getTokens, initializeOAuth2Client } from './services/googleAuth';
+import fs from 'fs';
+import path from 'path';
+
+const app = express();
+app.use(express.json());
+
+const TOKEN_PATH = path.join(__dirname, '../Google_Tokens/tokens.json');
+
+// Initialize OAuth2Client
+if (!initializeOAuth2Client()) {
+  console.error("Failed to initialize OAuth2Client. Please check your credentials.");
+  process.exit(1);
+}
+
+// Home route
+app.get('/', (req: Request, res: Response) => {
+  res.send('Welcome to the Email Assitant. <a href="/auth">Click here to authenticate</a>');
+});
+
+// Endpoint to start OAuth flow
+app.get('/auth', (req: Request, res: Response) => {
+  try {
+    const authUrl = getAuthUrl();
+    res.redirect(authUrl);
+  } catch (error) {
+    console.log('Error starting authentication process, Error generating auth URL:', error);
+  }
+});
+
+// OAuth callback endpoint
+app.get('/auth/callback', async (req: Request, res: Response) => {
+  const { code } = req.query;
+  if (code) {
+    console.log("Received authorization code:", code);
+    try {
+      const tokens = await getTokens(code as string); // Retrieve and store tokens
+
+      // Securely save tokens to a file
+      fs.writeFileSync(TOKEN_PATH, JSON.stringify(tokens));
+      console.log("Tokens retrieved successfully:", tokens);
+      res.redirect('/process-emails');
+    } catch (error) {
+      console.error('Error during authentication:', error);
+    }
+  } else {
+    console.log('No authorization code provided');
+  }
+});
+
+// Endpoint to trigger email processing
+app.get('/process-emails', async (req: Request, res: Response) => {
+  if (!loadSavedCredentialsIfExist()) {
+    res.redirect('/auth');
+    return;
+  }
+  try {
+    await processEmails(req, res, openAI);
+  } catch (error) {
+    console.error('Error processing emails:', error);
+  }
+});
+
+// Scheduling the email processing job using CronJob
+const job = new CronJob('*/100 * * * * *', async () => { // Run every 100 seconds
+  if (loadSavedCredentialsIfExist()) {
+    try {
+      await processEmails({} as Request, { send: () => {} } as unknown as Response, openAI);
+      console.log('Emails processed successfully.');
+    } catch (err) {
+      console.error('Error processing emails:', err);
+    }
+  } else {
+    console.log('No saved credentials found. Please authenticate at /auth');
+  }
+}, null, true, 'Asia/Kolkata');
+
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+  console.log(`Server is running at http://localhost:${PORT}`);
+  console.log(`Please authenticate by visiting http://localhost:${PORT}/auth`);
+});
+// src/services/gmailService.ts
+import { google } from 'googleapis';
+import { getOAuth2Client } from './googleAuth';
+
+const getGmailService = () => {
+  const oauth2Client = getOAuth2Client();
+  return google.gmail({ version: 'v1', auth: oauth2Client });
+};
+
+export const listEmails = async () => {
+  const gmail = getGmailService();
+  const res = await gmail.users.messages.list({
+    userId: 'me',
+    q: 'is:unread',
+  });
+  return res.data.messages || [];
+};
+
+export const getEmailContent = async (messageId: string) => {
+  const gmail = getGmailService();
+  const res = await gmail.users.messages.get({
+    userId: 'me',
+    id: messageId,
+  });
+  const emailData = res.data;
+  const emailBody = Buffer.from(emailData.payload?.body?.data || '', 'base64').toString();
+  return { emailBody, emailData };
+};
+
+export const sendEmailReply = async (emailData: any, replyMessage: string) => {
+  const gmail = getGmailService();
+  const threadId = emailData.threadId;
+  const replyTo = emailData.payload.headers.find((header: any) => header.name === 'From').value;
+
+  const rawMessage = [
+    `To: ${replyTo}`,
+    `Subject: Re: ${emailData.payload.headers.find((header: any) => header.name === 'Subject').value}`,
+    'Content-Type: text/plain; charset="UTF-8"',
+    '',
+    replyMessage,
+  ].join('\n');
+
+  const encodedMessage = Buffer.from(rawMessage)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+
+  await gmail.users.messages.send({
+    userId: 'me',
+    requestBody: {
+      raw: encodedMessage,
+      threadId,
+    },
+  });
+};
+import { OAuth2Client } from "google-auth-library";
+import dotenv from "dotenv";
+import fs from "fs";
+import path from "path";
+
+dotenv.config();
+
+const TOKEN_PATH = path.join(__dirname, '../../Google_Tokens/tokens.json');
+const CREDENTIALS_PATH = path.join(__dirname, '../../Google_Tokens/credentials.json');
+
+let oauth2Client: OAuth2Client;
+
+export function initializeOAuth2Client(): boolean {
+  try {
+    const credentials =  JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf8'));
+    const { client_secret, client_id, redirect_uris } = credentials.web;
+    oauth2Client = new OAuth2Client(client_id, client_secret, redirect_uris[0]);
+    return true;
+  } catch (error) {
+    console.error('Error loading client secret file:', error);
+    return false;
+  }
+}
+
+export const getAuthUrl = () => {
+  if (!oauth2Client) {
+    if (!initializeOAuth2Client()) {
+      throw new Error("OAuth2Client not initialized");
+    }
+  }
+  return oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: ['https://www.googleapis.com/auth/gmail.modify'],
+    prompt: 'consent'
+  });
+};
+
+export async function getTokens(code: string) {
+  if (!oauth2Client) {
+    throw new Error("OAuth2Client is not initialized");
+  }
+  const { tokens } = await oauth2Client.getToken(code);
+  oauth2Client.setCredentials(tokens);
+  return tokens;
+}
+
+export function loadSavedCredentialsIfExist(): boolean {
+  try {
+    const tokenData = fs.readFileSync(TOKEN_PATH, 'utf8');
+    const tokens = JSON.parse(tokenData);
+    if (oauth2Client) {
+      oauth2Client.setCredentials(tokens);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.log('No saved credentials found.');
+    return false;
+  }
+}
+
+export function getOAuth2Client(): OAuth2Client {
+  return oauth2Client;
+}

@@ -1,0 +1,29 @@
+{
+  "name": "rag",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@langchain/ollama": "^0.1.0",
+    "@langchain/openai": "^0.3.0",
+    "@llamaindex/core": "^0.2.2",
+    "@types/node": "^22.5.5",
+    "axios": "^1.7.7",
+    "chroma": "^0.0.1",
+    "chromadb": "^1.8.1",
+    "chromadb-default-embed": "^2.13.2",
+    "dotenv": "^16.4.5",
+    "langchain": "^0.3.2",
+    "llamaindex": "^0.6.2",
+    "ollama": "^0.5.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.2"
+  }
+}
