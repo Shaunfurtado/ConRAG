@@ -1,28 +1,33 @@
-// src/logger.ts
 import fs from 'fs/promises';
 import { config } from './config';
 
 export class Logger {
-  private logs: any[] = [];
+  private static instance: Logger;
+  private logFile: string;
 
-  async log(message: string, data?: any) {
-    const logEntry = {
-      timestamp: new Date().toISOString(),
-      message,
-      data,
-    };
-    this.logs.push(logEntry);
-    console.log(message, data ? data : '');
+  private constructor() {
+    this.logFile = config.logPath;
   }
 
-  async saveLogs() {
-    try {
-      await fs.writeFile(config.logPath, JSON.stringify(this.logs, null, 2));
-      console.log('Logs saved successfully.');
-    } catch (error) {
-      console.error('Error saving logs:', error);
+  public static getInstance(): Logger {
+    if (!Logger.instance) {
+      Logger.instance = new Logger();
     }
+    return Logger.instance;
+  }
+
+  public async log(message: string, data?: any): Promise<void> {
+    const timestamp = new Date().toISOString();
+    const logEntry = {
+      timestamp,
+      message,
+      data: data instanceof Error ? { 
+        name: data.name,
+        message: data.message,
+        stack: data.stack
+      } : data,
+    };
+
+    await fs.appendFile(this.logFile, JSON.stringify(logEntry) + '\n');
   }
 }
-
-export const logger = new Logger();

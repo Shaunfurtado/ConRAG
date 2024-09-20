@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@langchain/community": "^0.3.1",
     "@langchain/ollama": "^0.1.0",
     "@langchain/openai": "^0.3.0",
     "@llamaindex/core": "^0.2.2",

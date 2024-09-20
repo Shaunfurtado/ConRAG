@@ -1,55 +1,45 @@
-PS C:\Apps\codes\Mail-Assistant> npm run dev
+Leilani
+I still remember the first day I saw her. It was in English. She had positioned herself at the front of the classroom and I took the seat directly behind her. My friend Rebecca walked in a few moments later and noticing that there was no empty seat next to me, looked confused.
 
-> mail-assistant@1.0.0 dev
-> ts-node src/app.ts
+Sitting behind Leilani had not been my choice. Natural desire had pushed me that way and it would have burned within me had a decided to sit anywhere else. It might have been the darkness of her skin, compared to the paleness of all of ours that pulled me in. Her lips were stained coral and she smelled like candy. I assumed she did not know perfume and make-up were not allowed. Her hair was a thick sheet of black and it hung over the back of her chair, taunting me. I wanted so badly to stroke it and that longing scared me. 
 
-(node:22184) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
-(Use `node --trace-deprecation ...` to show where the warning was created)
-Server is running at http://localhost:8080
-Please authenticate by visiting http://localhost:8080/auth
-No saved credentials found.
-No saved credentials found. Please authenticate at /auth
-Received authorization code: 4/0AQlEd8wgptMjVKERAlqC5TeyQ_sJxnWj4jgXuHqujXCU4wkG_LO-X9Y9Y_vIErUPhkbnKQ
-Tokens retrieved successfully: {
-  access_token: 'ya29.a0AcM612ybwaw_EvH0mzyisH6to9Ik53MUzL8trke_yQjzDD1nLo8gkw4dTo9hXNINugGWOw62nFXbkKBVLnb0jTqr1TNt25olKLcnSmUzkuJlqhAVJxmGtLw5_51Mkz090PS9z6nSQfV8h-Nz1_LuWaGZJGtuzRZFeiFweYKOaCgYKAcgSARISFQHGX2MiiL6xMJHFQaQFG5Duvj98uw0175',
-  refresh_token: '1//0gQpABVp1ui22CgYIARAAGBASNwF-L9Irkamc5ygw57hFoy2VrUfD2KDHCl7VV3gQwwLonuusiKbL4xpvnfltx63L6ReJWX1ji4M',
-  scope: 'https://www.googleapis.com/auth/gmail.modify',
-  token_type: 'Bearer',
-  expiry_date: 1726066562474
-}
-Email with ID 191e07bf1e875634 processed successfully.
+            “Excuse me,” she said, turning around. “How much is the Shakespeare collection for this class?”
 
-Processing email: {
-  id: '191e07bf1e875634',
-  threadId: '191e07bf1e875634',
-  labelIds: [ 'UNREAD', 'CATEGORY_PERSONAL', 'INBOX' ],
-  snippet: 'Hi Alex, We&#39;re excited to invite you to the Future of Tech Summit, taking place on October 15th at 10 AM in Silicon Valley. We believe this event will be a valuable opportunity to network with',
-  payload: {
-    partId: '',
-    mimeType: 'multipart/alternative',
-    filename: '',
-    headers: [
-      [Object], [Object], [Object],
-      [Object], [Object], [Object],
-      [Object], [Object], [Object],
-      [Object], [Object], [Object],
-      [Object], [Object], [Object],
-      [Object], [Object], [Object],
-      [Object], [Object], [Object],
-      [Object]
-    ],
-    body: { size: 0 },
-    parts: [ [Object], [Object] ]
-  },
-  sizeEstimate: 6248,
-  historyId: '20156',
-  internalDate: '1726048090000'
-}
-Email with ID 191e07b1fc11cf55 processed successfully.
-Email with ID 191e07aa0ad79d15 processed successfully.
-Email with ID 191e05de7092e029 processed successfully.
-Email with ID 191e05d4535a57a6 processed successfully.
-Email classification result: Interested
-Email classified as: Interested
-Generated reply: Subject: Re: Invitation to Future of Tech Summit
+            “I…I don’t know.” Syllabi for all of our classes arrived in the mail in the summer. I gave mine to my mother and she purchased all of the books. I’m sure my mother didn’t even know how much she paid for it. But Leilani made me wish I had cared.
 
+            I watched Leilani as she eyed a copy of the collection that was on the desk of the girl beside her. Her eyes were distinct: almond like in shape and color. They had drifted away from me and I needed them back.  Wanting to say something to her so badly, I blurted out, “I think it was around $60.”
+
+            “Oh, thanks,” she said. She didn’t look at me again. Instead she scribbled something in her notebook: “check library for Shakespeare collection” I read over her shoulder. 
+
+            As time went on, Leilani became a prime conversation piece for everyone in St. Mary’s. It was senior year and we were all more than ready to graduate and go to college where we would have boys in our classes. Coming to St. Mary’s at this time seemed backwards and though I’m sure she had a reason, I never found it out what it was. They were simple questions: “are you new in town?”, “where did you live before?”, “what made you come here?” But I was too wrapped up in the social politics of St. Mary’s to ask what I wanted to know. 
+
+            Instead of speaking to her, we stared as she floated from class to class alone, her uniform skirt like a tent over her wide hips. We commented on how poor she had to be considering her Reebok Classics. She didn’t even wear pearls. 
+
+There were a number of times I knew for sure Leilani had heard our comments about her oversized ass and ownership of a bus pass. A few times she had looked directly at me, almond eyes brimming with amusement as she continued walking to wherever. 
+
+#
+
+One day, after school, I saw Leilani standing at the old pay phone on the side of the St. Mary’s building. It was a hot spring day and she had the long sleeves of her uniform button-down rolled up. She was engrossed in the conversation she was having on the phone and didn’t seem to notice that anyone else was near. 
+
+            “…They could come out though. My point is they could come out. I could be like doing something on the floor and they could come out and be like…”
+
+            She paused, presumably for whoever was on the other end to speak. I inched closer.
+
+            “But where is the bed though, Vincent? Is the bed against the wall?”
+
+            She paused again. I was quite close now. She was shorter than me and so I could see straight down her shirt. It was hard not to imagine unbuttoning the rest of it and feeling her curves in my hands. When I managed to tear my eyes away from her chest, I noticed her right forearm. Tattooed in pink was a hibiscus flower. I recognized it from my vacation the previous summer in Hawaii. Under the flower, in neat but fluid cursive, was the name Vincent, which I read upside down. 
+
+            “Oh, so your father can’t see the bed? Is the bed high?”
+
+            She brushed a hand over the black hair before flipping it. She wrinkled her round nose in good humor at whatever “Vincent” had said. I hated this Vincent. 
+            Before I knew it had happened, her conversation was over and she was looking at me. She did not seem surprised. She smiled before running her tongue over her lips and then slowly over her teeth. She bit her bottom lip all the while staring into me with her sharp, almond eyes and I thought “this is it”. This is right, me and her, and she thinks so too and…
+
+And then she laughed at me. She shook her head, picked her bag up and before I could beat her to it, Leilani walked away, hips swinging, black hair soaring behind her.
+
+   Kesia Alexandra
+
+Word Count: 857
+
+keeweeflavour.tumblr.com
+
+Submitted by kesiawrites-deactivated20230822
