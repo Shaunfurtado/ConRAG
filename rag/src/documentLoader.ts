@@ -1,3 +1,4 @@
+// rag\src\documentLoader.ts
 import fs from 'fs/promises';
 import { Document } from 'langchain/document';
 import { config } from './config';

@@ -1,3 +1,4 @@
+// rag\src\index.ts
 import { RAGSystem } from './ragSystem';
 import { loadDocument } from './documentLoader';
 import readline from 'readline';

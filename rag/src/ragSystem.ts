@@ -1,3 +1,4 @@
+// rag\src\ragSystem.ts
 import { VectorStore } from './vectorStore';
 import { LLMService } from './llmService';
 import { DatabaseService } from './databaseService';
@@ -20,6 +21,10 @@ export class RAGSystem {
     this.llmService = new LLMService();
     this.databaseService = new DatabaseService();
     this.logger = Logger.getInstance();
+  }
+
+  async getConversationHistory(): Promise<{ question: string; answer: string }[]> {
+    return this.databaseService.getConversationHistory();
   }
 
   async initialize(documents: Document[]): Promise<void> {

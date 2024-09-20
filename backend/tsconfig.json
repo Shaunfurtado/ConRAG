@@ -1,13 +1,21 @@
 {
-    "compilerOptions": {
-      "target": "es2020",
-      "module": "commonjs",
-      "esModuleInterop": true,
-      "forceConsistentCasingInFileNames": true,
-      "strict": true,
-      "noImplicitAny": true,
-      "skipLibCheck": true,
-      "outDir": "./dist",
-      "rootDir": "./src"
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "outDir": "./dist",
+    "rootDir": "../../",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": "../../",
+    "paths": {
+      "*": ["*", "rag/src/*"]
     }
-  }
+  },
+  "include": [
+    "src/**/*",
+    "../rag/src/**/*"
+  ],
+  "exclude": ["node_modules"]
+}
