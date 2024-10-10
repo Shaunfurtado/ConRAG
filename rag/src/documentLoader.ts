@@ -1,7 +1,6 @@
 // rag\src\documentLoader.ts
 import fs from 'fs/promises';
 import { Document } from 'langchain/document';
-import { config } from './config';
 import { Logger } from './logger';
 
 // Function to chunk document into smaller pieces (paragraphs, sentences, or pages)
@@ -16,19 +15,22 @@ function chunkDocument(content: string, chunkSize: number = 200): string[] {
   return chunks;
 }
 
-export async function loadDocument(): Promise<Document[]> {
+export async function loadDocuments(paths: string[]): Promise<Document[]> {
   const logger = Logger.getInstance();
-  await logger.log('Loading document');
+  await logger.log('Loading documents from paths', { paths });
 
-  const content = await fs.readFile(config.documentPath, 'utf-8');
-  
-  // Split document into chunks for better embedding and retrieval
-  const documentChunks = chunkDocument(content);
-  const documents = documentChunks.map((chunk, index) => new Document({
-    pageContent: chunk,
-    metadata: { source: config.documentPath, chunk: index },
-  }));
+  const documents: Document[] = [];
 
-  await logger.log('Document loaded and chunked successfully');
+  for (const path of paths) {
+    const content = await fs.readFile(path, 'utf-8');
+    const documentChunks = chunkDocument(content);
+    const docChunks = documentChunks.map((chunk, index) => new Document({
+      pageContent: chunk,
+      metadata: { source: path, chunk: index },
+    }));
+    documents.push(...docChunks);
+  }
+
+  await logger.log('Documents loaded and chunked successfully', { count: documents.length });
   return documents;
 }

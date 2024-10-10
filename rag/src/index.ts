@@ -1,6 +1,6 @@
 // rag\src\index.ts
 import { RAGSystem } from './ragSystem';
-import { loadDocument } from './documentLoader';
+import { loadDocuments } from './documentLoader';
 import readline from 'readline';
 import { Logger } from './logger';
 
@@ -12,7 +12,8 @@ async function main() {
     const ragSystem = new RAGSystem();
 
     await logger.log('Loading documents');
-    const documents = await loadDocument();
+    const documentPaths = ['./docs/doc1.txt', './docs/doc2.txt']; 
+    const documents = await loadDocuments(documentPaths);
 
     await logger.log('Initializing vector store and adding documents if necessary');
     await ragSystem.initialize(documents);
@@ -29,6 +30,10 @@ async function main() {
         await logger.log('Exiting RAG system');
         console.log('Exiting RAG system. Goodbye!');
         rl.close();
+        return;
+      } else if (input.toLowerCase() === '/new') {
+        await ragSystem.startNewConversation(); // Start a new conversation
+        console.log('New conversation started. Ask your question:');
         return;
       }
 

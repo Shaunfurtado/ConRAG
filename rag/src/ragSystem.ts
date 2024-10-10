@@ -1,4 +1,3 @@
-// rag\src\ragSystem.ts
 import { VectorStore } from './vectorStore';
 import { LLMService } from './llmService';
 import { DatabaseService } from './databaseService';
@@ -27,6 +26,12 @@ export class RAGSystem {
     return this.databaseService.getConversationHistory();
   }
 
+  // New method to start a new conversation session
+  async startNewConversation(): Promise<void> {
+    await this.logger.log('Starting a new conversation session');
+    this.databaseService.startNewSession();  // This method will reset the session ID in the DatabaseService
+  }
+
   async initialize(documents: Document[]): Promise<void> {
     await this.logger.log('Initializing RAG system');
     await this.vectorStore.initialize(documents);
@@ -43,10 +48,10 @@ export class RAGSystem {
 
     // Step 2: Rerank documents and generate context
     const documentContext = this.generateContext(relevantDocs);
-    
+
     // Step 3: Fetch conversation history for context
     const conversationHistory = await this.databaseService.getConversationHistory();
-    
+
     // Step 4: Create optimized prompt using the context and history
     const finalPrompt = this.createFinalPrompt(question, documentContext, conversationHistory);
 

@@ -24,6 +24,7 @@ export class VectorStore {
       const collectionName = `rag_collection_${this.sessionId}`;
       this.collection = await this.client.createCollection({ name: collectionName });
 
+      // Generate and store embeddings once during initialization
       await this.addDocuments(documents);
 
       await this.logger.log('Vector store initialized successfully');
@@ -40,9 +41,11 @@ export class VectorStore {
 
     try {
       const ids = documents.map((_, index) => `doc_${index}`);
-      const embeddings = await Promise.all(documents.map(doc => this.getEmbedding(doc.pageContent)));
+      const embeddings = await Promise.all(documents.map(doc => this.getEmbedding(doc.pageContent)));  // Embed once
+
       const metadatas = documents.map(doc => doc.metadata);
 
+      // Store document embeddings in Chroma collection
       await this.collection.add({
         ids,
         embeddings,
@@ -65,11 +68,11 @@ export class VectorStore {
     }
 
     try {
-      const queryEmbedding = await this.getEmbedding(query);
+      const queryEmbedding = await this.getEmbedding(query);  // Generate embedding for the query
 
       const results = await this.collection.query({
         queryEmbeddings: [queryEmbedding],
-        nResults: k,
+        nResults: k,  // Retrieve top k relevant results from all documents
       });
 
       await this.logger.log('Similarity search completed', { resultCount: results.documents?.[0]?.length || 0 });
@@ -79,7 +82,7 @@ export class VectorStore {
         return [];
       }
 
-      // Implement reranking based on relevance score
+      // Return top-ranked documents from all sources
       const filteredDocs = results.documents[0].filter((doc): doc is string => doc !== null);
       const scores = (results as any).scores ? (results as any).scores[0] : [];
       const rankedResults = this.rerankResults(filteredDocs, scores);
@@ -95,10 +98,26 @@ export class VectorStore {
   }
 
   private async getEmbedding(text: string): Promise<number[]> {
-    // Use a proper embedding model like OpenAI's embedding API
-    // Placeholder function - Replace with actual embedding model integration
-    return Array.from({ length: 384 }, () => Math.random());
-  }
+    try {
+        const response = await fetch('http://localhost:5000/embed', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ text })
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        return data; // Return the embedding received from Flask API
+    } catch (error) {
+        console.error('Error fetching embeddings:', error);
+        throw new Error('Failed to fetch embeddings');
+    }
+}
 
   private rerankResults(docs: string[], scores: number[]): string[] {
     // Sort docs by their scores for reranking

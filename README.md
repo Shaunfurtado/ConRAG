@@ -8,12 +8,12 @@ Conversational AI with RAG for Document-Based Queries with natural speech.
 * RAG python
 * Llm llamav3.1 with ollama and langchain(for character token splits)
 * llamaindex for typescript support
-* Stt. Jasper
-* Tts. Fastspeech 2.0 compatible
-* NoSQL CouchDb for flexible storage
-* Pinecone for vector embeddings storage
+* STT Web Speech API
+* TTS WEb API
+* SQLite Db for flexible storage
+* ChromaDB for vector embeddings storage
 * BullMQ For task scheduling
-* Rive for 2d character
+* Rive for 2d Avatar character
 * Turborepo for managing Monorepo
 * Docker
 
