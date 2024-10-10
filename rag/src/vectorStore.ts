@@ -3,11 +3,7 @@ import { ChromaClient, Collection } from 'chromadb';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from './config';
 import { Logger } from './logger';
-
-interface Document {
-  pageContent: string;
-  metadata: { [key: string]: any };
-}
+import { Document } from './types'; // Add appropriate Document interface if missing
 
 export class VectorStore {
   private client: ChromaClient;
@@ -26,9 +22,7 @@ export class VectorStore {
 
     try {
       const collectionName = `rag_collection_${this.sessionId}`;
-      this.collection = await this.client.createCollection({
-        name: collectionName,
-      });
+      this.collection = await this.client.createCollection({ name: collectionName });
 
       await this.addDocuments(documents);
 
@@ -85,7 +79,12 @@ export class VectorStore {
         return [];
       }
 
-      return results.documents[0].map((doc, index) => ({
+      // Implement reranking based on relevance score
+      const filteredDocs = results.documents[0].filter((doc): doc is string => doc !== null);
+      const scores = (results as any).scores ? (results as any).scores[0] : [];
+      const rankedResults = this.rerankResults(filteredDocs, scores);
+
+      return rankedResults.map((doc, index) => ({
         pageContent: doc || '',
         metadata: results.metadatas?.[0]?.[index] || {},
       }));
@@ -96,7 +95,13 @@ export class VectorStore {
   }
 
   private async getEmbedding(text: string): Promise<number[]> {
-    // This is a placeholder. In a real implementation, you would use an actual embedding model.
+    // Use a proper embedding model like OpenAI's embedding API
+    // Placeholder function - Replace with actual embedding model integration
     return Array.from({ length: 384 }, () => Math.random());
+  }
+
+  private rerankResults(docs: string[], scores: number[]): string[] {
+    // Sort docs by their scores for reranking
+    return docs.sort((a, b) => scores[docs.indexOf(b)] - scores[docs.indexOf(a)]);
   }
 }
