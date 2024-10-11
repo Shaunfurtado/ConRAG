@@ -8,5 +8,9 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "card": "^2.5.4",
+    "textarea": "^0.3.0"
+  }
 }
