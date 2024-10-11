@@ -1,4 +1,3 @@
-// rag\src\databaseService.ts
 import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import { v4 as uuidv4 } from 'uuid';
@@ -16,7 +15,7 @@ export class DatabaseService {
 
   constructor() {
     this.logger = Logger.getInstance();
-    this.sessionId = uuidv4();
+    this.sessionId = uuidv4();  // Session ID is generated on initialization
   }
 
   async initialize(): Promise<void> {
@@ -62,6 +61,11 @@ export class DatabaseService {
       await this.logger.log('Error saving conversation to database', error);
       throw new Error(`Failed to save conversation: ${(error as Error).message}`);
     }
+  }
+
+  // Reset session by generating a new session ID
+  startNewSession(): void {
+    this.sessionId = uuidv4();
   }
 
   async getConversationHistory(): Promise<ConversationTurn[]> {
