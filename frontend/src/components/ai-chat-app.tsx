@@ -9,6 +9,7 @@ import { Mic, Paperclip, Send } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import remarkGfm from 'remark-gfm'
 
 type Message = {
   id: string
@@ -19,51 +20,47 @@ type Message = {
 export function AiChatApp() {
   const [messages, setMessages] = useState<Message[]>([
     { id: '1', content: "Hello! How can I assist you today?", sender: 'ai' },
-    { id: '2', content: "Can you explain what markdown is?", sender: 'user' },
-    { id: '3', content: `Markdown is a lightweight markup language that you can use to add formatting elements to plaintext text documents. It was created by John Gruber in 2004 and has become one of the world's most popular markup languages.
-
-Here are some examples of Markdown syntax:
-
-# Heading 1
-## Heading 2
-### Heading 3
-
-- Bullet point 1
-- Bullet point 2
-- Bullet point 3
-
-1. Numbered list item 1
-2. Numbered list item 2
-3. Numbered list item 3
-
-**Bold text**
-*Italic text*
-~~Strikethrough text~~
-
-[Link to OpenAI](https://www.openai.com)
-
-\`\`\`python
-def hello_world():
-    print("Hello, World!")
-\`\`\`
-
-Markdown is widely used for:
-- README files
-- Forum & blog posts
-- Documentation
-- Note-taking
-
-It's designed to be easy to read and write, and can be converted to HTML and many other formats.`, sender: 'ai' },
   ])
   const [newMessage, setNewMessage] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (newMessage.trim()) {
-      setMessages([...messages, { id: Date.now().toString(), content: newMessage, sender: 'user' }])
+      const userMessage: Message = { id: Date.now().toString(), content: newMessage, sender: 'user' }
+      setMessages((prevMessages) => [...prevMessages, userMessage])
       setNewMessage('')
-      // Here you would typically call an API to get the AI's response
+      setLoading(true)
+  
+      try {
+        // Send the user message to the backend via POST request to the RAG system server running at http://localhost:3001/query
+        const response = await fetch('http://localhost:3001/query', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ question: userMessage.content }),
+        })
+  
+        const data = await response.json()
+        const aiMessage: Message = {
+          id: Date.now().toString(),
+          content: data.answer || 'Sorry, something went wrong.',
+          sender: 'ai',
+        }
+  
+        setMessages((prevMessages) => [...prevMessages, aiMessage])
+      } catch (error) {
+        console.error('Error fetching AI response:', error)
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { id: Date.now().toString(), content: 'Error fetching response from server.', sender: 'ai' },
+        ])
+      } finally {
+        setLoading(false)
+      }
     }
   }
+  
 
   return (
     <div className="flex flex-col h-screen max-w-2xl mx-auto bg-gray-100 dark:bg-gray-900">
@@ -79,19 +76,20 @@ It's designed to be easy to read and write, and can be converted to HTML and man
           >
             <div className={`flex ${message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start`}>
               <Avatar className="w-8 h-8">
-                <AvatarImage src={message.sender === 'user' ? "/placeholder.svg?height=32&width=32" : "/placeholder.svg?height=32&width=32&text=AI"} />
+                <AvatarImage
+                  src={message.sender === 'user' ? "/placeholder.svg?height=32&width=32" : "/placeholder.svg?height=32&width=32&text=AI"}
+                />
                 <AvatarFallback>{message.sender === 'user' ? 'U' : 'AI'}</AvatarFallback>
               </Avatar>
               <div
                 className={`mx-2 p-3 rounded-lg ${
-                  message.sender === 'user'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-white'
+                  message.sender === 'user' ? 'bg-blue-500 text-white' : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-white'
                 }`}
               >
                 <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
                   components={{
-                    code({node, inline, className, children, ...props}: {node: any, inline: boolean, className: string, children: React.ReactNode}) {
+                    code({node, inline, className, children, ...props}) {
                       const match = /language-(\w+)/.exec(className || '')
                       return !inline && match ? (
                         <SyntaxHighlighter
@@ -127,13 +125,13 @@ It's designed to be easy to read and write, and can be converted to HTML and man
             onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
             className="flex-1"
           />
-          <Button size="icon" variant="ghost">
+          <Button size="icon" variant="ghost" disabled={loading}>
             <Mic className="h-5 w-5" />
           </Button>
-          <Button size="icon" variant="ghost">
+          <Button size="icon" variant="ghost" disabled={loading}>
             <Paperclip className="h-5 w-5" />
           </Button>
-          <Button size="icon" onClick={handleSendMessage}>
+          <Button size="icon" onClick={handleSendMessage} disabled={loading}>
             <Send className="h-5 w-5" />
           </Button>
         </div>
