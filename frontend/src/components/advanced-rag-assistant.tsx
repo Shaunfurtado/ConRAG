@@ -1,21 +1,77 @@
 'use client'
 
-import React, { useState } from 'react'
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { Mic, PaperclipIcon, Send, Settings, Plus, Volume2 } from 'lucide-react'
+import React, { useState, useRef } from 'react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Mic, PaperclipIcon, Send, Settings, Plus, Volume2 } from 'lucide-react';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
+import ListItemButton from '@mui/material/ListItemButton';
+
+interface Message {
+  sender: 'user' | 'ai';
+  text: string;
+  timestamp: string;
+}
 
 export function AdvancedRagAssistant() {
-  const [activeTab, setActiveTab] = useState('chat')
-  const [activeProfile, setActiveProfile] = useState('General')
-  const [isFileUploadOpen, setIsFileUploadOpen] = useState(false)
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState('chat');
+  const [activeProfile, setActiveProfile] = useState('General');
+  const [isFileUploadOpen, setIsFileUploadOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [chats, setChats] = useState(['Chat 1', 'Chat 2']);
+  const [selectedChat, setSelectedChat] = useState('Chat 1');
+  const [messages, setMessages] = useState<{ [key: string]: Message[] }>({
+    'Chat 1': [],
+    'Chat 2': []
+  });
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const addNewChat = () => {
+    const newChatName = `Chat ${chats.length + 1}`;
+    setChats((prevChats) => [...prevChats, newChatName]);
+    setMessages((prevMessages) => ({ ...prevMessages, [newChatName]: [] }));
+  };
+
+  const sendMessage = async (message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setMessages((prevMessages) => ({
+      ...prevMessages,
+      [selectedChat]: [...prevMessages[selectedChat], { sender: 'user', text: message, timestamp }]
+    }));
+    try {
+      const response = await fetch('/api/processMessage', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message }),
+      });
+      const data = await response.json();
+      setMessages((prevMessages) => ({
+        ...prevMessages,
+        [selectedChat]: [...prevMessages[selectedChat], { sender: 'ai', text: data.response, timestamp: new Date().toLocaleTimeString() }]
+      }));
+    } catch (error) {
+      console.error('Error occurred while processing the message:', error);
+    }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      setUploadedFiles((prevFiles) => [...prevFiles, ...Array.from(files)]);
+    }
+  };
 
   return (
     <div className="flex h-screen bg-gray-900 text-gray-100">
@@ -26,25 +82,34 @@ export function AdvancedRagAssistant() {
         </div>
         <div className="mb-8">
           <h3 className="mb-2 text-sm font-semibold text-gray-400">Chat History</h3>
-          <ul className="space-y-2">
-            {['Chat 1', 'Chat 2', 'Chat 3', 'Chat 4'].map((chat) => (
-              <li key={chat} className="px-2 py-1 rounded hover:bg-gray-700 cursor-pointer">{chat}</li>
+          <List>
+            {chats.map((chat) => (
+              <ListItem key={chat} disablePadding>
+                <ListItemButton
+                  selected={selectedChat === chat}
+                  onClick={() => setSelectedChat(chat)}
+                >
+                  <ListItemText primary={chat} />
+                </ListItemButton>
+              </ListItem>
             ))}
-          </ul>
+          </List>
+          <Button onClick={addNewChat} className="mt-4 bg-blue-500 text-white py-1 px-2 rounded">Add New Chat</Button>
         </div>
         <div>
           <h3 className="mb-2 text-sm font-semibold text-gray-400">Profiles</h3>
-          <ul className="space-y-2">
+          <List>
             {['General', 'Tutor', 'NotesPrep', 'Research Ast'].map((profile) => (
-              <li
-                key={profile}
-                className={`px-2 py-1 rounded cursor-pointer ${activeProfile === profile ? 'bg-blue-600' : 'hover:bg-gray-700'}`}
-                onClick={() => setActiveProfile(profile)}
-              >
-                {profile}
-              </li>
+              <ListItem key={profile} disablePadding>
+                <ListItemButton
+                  selected={activeProfile === profile}
+                  onClick={() => setActiveProfile(profile)}
+                >
+                  <ListItemText primary={profile} />
+                </ListItemButton>
+              </ListItem>
             ))}
-          </ul>
+          </List>
         </div>
       </div>
 
@@ -68,27 +133,26 @@ export function AdvancedRagAssistant() {
             <ScrollArea className="h-full p-4">
               {/* Chat messages would go here */}
               <div className="space-y-4">
-                <div className="flex items-start">
-                  <Avatar className="mr-2">
-                    <AvatarImage src="/placeholder.svg?height=40&width=40" alt="AI" />
-                    <AvatarFallback>AI</AvatarFallback>
-                  </Avatar>
-                  <div className="bg-gray-700 rounded-lg p-3 max-w-[80%]">
-                    <p className="text-sm">Hello! How can I assist you today?</p>
-                    <span className="text-xs text-gray-400 mt-1">12:34 PM</span>
+                {messages[selectedChat]?.map((msg, index) => (
+                  <div key={index} className={`flex items-start ${msg.sender === 'user' ? 'justify-end' : ''}`}>
+                    {msg.sender === 'ai' && (
+                      <Avatar className="mr-2">
+                        <AvatarImage src="/placeholder.svg?height=40&width=40" alt="AI" />
+                        <AvatarFallback>AI</AvatarFallback>
+                      </Avatar>
+                    )}
+                    <div className={`bg-${msg.sender === 'user' ? 'blue-600' : 'gray-700'} rounded-lg p-3 max-w-[80%]`}>
+                      <p className="text-sm">{msg.text}</p>
+                      <span className="text-xs text-gray-400 mt-1">{msg.timestamp}</span>
+                    </div>
+                    {msg.sender === 'user' && (
+                      <Avatar className="ml-2">
+                        <AvatarImage src="/placeholder.svg?height=40&width=40" alt="User" />
+                        <AvatarFallback>U</AvatarFallback>
+                      </Avatar>
+                    )}
                   </div>
-                </div>
-                <div className="flex items-start justify-end">
-                  <div className="bg-blue-600 rounded-lg p-3 max-w-[80%]">
-                    <p className="text-sm">Can you help me with my research on climate change?</p>
-                    <span className="text-xs text-gray-300 mt-1">12:35 PM</span>
-                  </div>
-                  <Avatar className="ml-2">
-                    <AvatarImage src="/placeholder.svg?height=40&width=40" alt="User" />
-                    <AvatarFallback>U</AvatarFallback>
-                  </Avatar>
-                </div>
-                {/* More messages would be added here */}
+                ))}
               </div>
             </ScrollArea>
           ) : (
@@ -122,8 +186,23 @@ export function AdvancedRagAssistant() {
           <Button variant="outline" size="icon" className="mr-2" onClick={() => setIsFileUploadOpen(true)}>
             <PaperclipIcon className="h-4 w-4" />
           </Button>
-          <Input className="flex-1 bg-gray-700" placeholder="Type your message..." />
-          <Button className="ml-2">
+          <Input
+            className="flex-1 bg-gray-700"
+            placeholder="Type your message..."
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                sendMessage(e.currentTarget.value);
+                e.currentTarget.value = '';
+              }
+            }}
+          />
+          <Button className="ml-2" onClick={() => {
+            const inputElement = document.querySelector('input') as HTMLInputElement;
+            if (inputElement) {
+              sendMessage(inputElement.value);
+              inputElement.value = '';
+            }
+          }}>
             <Send className="h-4 w-4" />
           </Button>
         </div>
@@ -134,8 +213,10 @@ export function AdvancedRagAssistant() {
         <div className="mb-8">
           <h3 className="mb-2 text-sm font-semibold text-gray-400">Sources</h3>
           <ul className="space-y-2">
-            {['Doc1', 'Doc2', 'Doc3'].map((doc) => (
-              <li key={doc} className="px-2 py-1 rounded hover:bg-gray-700 cursor-pointer">{doc}</li>
+            {uploadedFiles.map((file, index) => (
+              <li key={index} className="px-2 py-1 rounded hover:bg-gray-700 cursor-pointer">
+                {file.name}
+              </li>
             ))}
           </ul>
         </div>
@@ -151,19 +232,29 @@ export function AdvancedRagAssistant() {
       </div>
 
       {/* Floating Action Button */}
-      <Button className="fixed bottom-4 right-4 rounded-full" size="icon">
+      <Button className="fixed bottom-4 right-4 rounded-full" size="icon" onClick={addNewChat}>
         <Plus className="h-4 w-4" />
       </Button>
 
       {/* File Upload Modal */}
       <Dialog open={isFileUploadOpen} onOpenChange={setIsFileUploadOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl">
           <DialogHeader>
             <DialogTitle>Upload Files</DialogTitle>
           </DialogHeader>
           <div className="p-4 border-2 border-dashed border-gray-400 rounded-lg text-center">
             <p>Drag & drop files here, or click to select files</p>
             <p className="text-sm text-gray-400 mt-2">Supported formats: PDF, TXT, Markdown, Audio</p>
+            <input
+              type="file"
+              multiple
+              className="hidden"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+            />
+            <Button onClick={() => fileInputRef.current?.click()} className="mt-4">
+              Select Files
+            </Button>
           </div>
           <div className="flex justify-between mt-4">
             <Button variant="outline">Google Drive</Button>
@@ -227,5 +318,5 @@ export function AdvancedRagAssistant() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
