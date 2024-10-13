@@ -25,5 +25,7 @@ yarn-error.log*
 .env*.local
 .env
 
+rag_conversations.db
+
 # logs
 logs

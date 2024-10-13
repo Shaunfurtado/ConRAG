@@ -3,7 +3,7 @@ import { ChromaClient, Collection } from 'chromadb';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from './config';
 import { Logger } from './logger';
-import { Document } from './types'; // Add appropriate Document interface if missing
+import { Document } from './types';
 
 export class VectorStore {
   private client: ChromaClient;
