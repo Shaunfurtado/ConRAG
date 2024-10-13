@@ -25,6 +25,12 @@ interface Message {
   timestamp: string;
 }
 
+const formatTimestamp = (date: Date) => {
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
+
 export function AdvancedRagAssistant() {
   const [activeTab, setActiveTab] = useState('chat');
   const [activeProfile, setActiveProfile] = useState('General');
@@ -50,7 +56,8 @@ export function AdvancedRagAssistant() {
 
   const handleSendMessage = async () => {
     if (newMessage.trim()) {
-      const userMessage: Message = { id: Date.now().toString(), text: newMessage, sender: 'user', timestamp: new Date().toLocaleTimeString() }
+      const timestamp = formatTimestamp(new Date());
+      const userMessage: Message = { id: Date.now().toString(), text: newMessage, sender: 'user', timestamp }
       setMessages((prevMessages) => ({
         ...prevMessages,
         [selectedChat]: [...prevMessages[selectedChat], userMessage]
@@ -73,7 +80,7 @@ export function AdvancedRagAssistant() {
           id: Date.now().toString(),
           text: data.answer || 'Sorry, something went wrong.',
           sender: 'ai',
-          timestamp: new Date().toLocaleTimeString()
+          timestamp: formatTimestamp(new Date())
         };
 
         setMessages((prevMessages) => ({
@@ -84,7 +91,7 @@ export function AdvancedRagAssistant() {
         console.error('Error fetching AI response:', error);
         setMessages((prevMessages) => ({
           ...prevMessages,
-          [selectedChat]: [...prevMessages[selectedChat], { id: Date.now().toString(), text: 'Error fetching response from server.', sender: 'ai', timestamp: new Date().toLocaleTimeString() }]
+          [selectedChat]: [...prevMessages[selectedChat], { id: Date.now().toString(), text: 'Error fetching response from server.', sender: 'ai', timestamp: formatTimestamp(new Date()) }]
         }));
       } finally {
         setLoading(false);
