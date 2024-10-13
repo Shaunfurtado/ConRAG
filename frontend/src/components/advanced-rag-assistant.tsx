@@ -14,6 +14,10 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemButton from '@mui/material/ListItemButton';
+import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import remarkGfm from 'remark-gfm';
 
 interface Message {
   sender: 'user' | 'ai';
@@ -33,6 +37,8 @@ export function AdvancedRagAssistant() {
     'Chat 2': []
   });
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -42,27 +48,47 @@ export function AdvancedRagAssistant() {
     setMessages((prevMessages) => ({ ...prevMessages, [newChatName]: [] }));
   };
 
-  const sendMessage = async (message: string) => {
-    const timestamp = new Date().toLocaleTimeString();
-    setMessages((prevMessages) => ({
-      ...prevMessages,
-      [selectedChat]: [...prevMessages[selectedChat], { sender: 'user', text: message, timestamp }]
-    }));
-    try {
-      const response = await fetch('/api/processMessage', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message }),
-      });
-      const data = await response.json();
+  const handleSendMessage = async () => {
+    if (newMessage.trim()) {
+      const userMessage: Message = { id: Date.now().toString(), text: newMessage, sender: 'user', timestamp: new Date().toLocaleTimeString() }
       setMessages((prevMessages) => ({
         ...prevMessages,
-        [selectedChat]: [...prevMessages[selectedChat], { sender: 'ai', text: data.response, timestamp: new Date().toLocaleTimeString() }]
+        [selectedChat]: [...prevMessages[selectedChat], userMessage]
       }));
-    } catch (error) {
-      console.error('Error occurred while processing the message:', error);
+      setNewMessage('');
+      setLoading(true);
+
+      try {
+        // Send the user message to the backend via POST request to the RAG system server running at http://localhost:3001/query
+        const response = await fetch('http://localhost:3001/query', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ question: userMessage.text }),
+        });
+
+        const data = await response.json();
+        const aiMessage: Message = {
+          id: Date.now().toString(),
+          text: data.answer || 'Sorry, something went wrong.',
+          sender: 'ai',
+          timestamp: new Date().toLocaleTimeString()
+        };
+
+        setMessages((prevMessages) => ({
+          ...prevMessages,
+          [selectedChat]: [...prevMessages[selectedChat], aiMessage]
+        }));
+      } catch (error) {
+        console.error('Error fetching AI response:', error);
+        setMessages((prevMessages) => ({
+          ...prevMessages,
+          [selectedChat]: [...prevMessages[selectedChat], { id: Date.now().toString(), text: 'Error fetching response from server.', sender: 'ai', timestamp: new Date().toLocaleTimeString() }]
+        }));
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -142,7 +168,31 @@ export function AdvancedRagAssistant() {
                       </Avatar>
                     )}
                     <div className={`bg-${msg.sender === 'user' ? 'blue-600' : 'gray-700'} rounded-lg p-3 max-w-[80%]`}>
-                      <p className="text-sm">{msg.text}</p>
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          code({ node, inline, className, children, ...props }) {
+                            const match = /language-(\w+)/.exec(className || '');
+                            return !inline && match ? (
+                              <SyntaxHighlighter
+                                style={atomDark}
+                                language={match[1]}
+                                PreTag="div"
+                                {...props}
+                              >
+                                {String(children).replace(/\n$/, '')}
+                              </SyntaxHighlighter>
+                            ) : (
+                              <code className={className} {...props}>
+                                {children}
+                              </code>
+                            );
+                          }
+                        }}
+                        className="prose dark:prose-invert max-w-none"
+                      >
+                        {msg.text}
+                      </ReactMarkdown>
                       <span className="text-xs text-gray-400 mt-1">{msg.timestamp}</span>
                     </div>
                     {msg.sender === 'user' && (
@@ -189,20 +239,15 @@ export function AdvancedRagAssistant() {
           <Input
             className="flex-1 bg-gray-700"
             placeholder="Type your message..."
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                sendMessage(e.currentTarget.value);
-                e.currentTarget.value = '';
+                handleSendMessage();
               }
             }}
           />
-          <Button className="ml-2" onClick={() => {
-            const inputElement = document.querySelector('input') as HTMLInputElement;
-            if (inputElement) {
-              sendMessage(inputElement.value);
-              inputElement.value = '';
-            }
-          }}>
+          <Button className="ml-2" onClick={handleSendMessage}>
             <Send className="h-4 w-4" />
           </Button>
         </div>
