@@ -47,11 +47,13 @@ export function AdvancedRagAssistant() {
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef<any>(null);
   const [inputText, setInputText] = useState("");
+  const [inputPlaceholder, setInputPlaceholder] = useState("Type your message...");
 
   const startRecording = () => {
     setIsRecording(true);
-    setInputText("Started listening...");
+    setInputPlaceholder("Started listening...");
     setTranscript("");
+    setInputText("");
     recognitionRef.current = new window.webkitSpeechRecognition();
     recognitionRef.current.continuous = false;
     recognitionRef.current.interimResults = false;
@@ -67,6 +69,7 @@ export function AdvancedRagAssistant() {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       setIsRecording(false);
+      setInputPlaceholder("Type your message...");
     }
   };
 
@@ -244,7 +247,7 @@ export function AdvancedRagAssistant() {
           >
             <PaperclipIcon className="h-4 w-4" />
           </Button>
-          <Input className="flex-1 bg-gray-700" placeholder="Type your message..." value={inputText} onChange={(e) => setInputText(e.target.value)} />
+          <Input className="flex-1 bg-gray-700" placeholder={inputPlaceholder} value={inputText} onChange={(e) => setInputText(e.target.value)} />
           <Button className="ml-2">
             <Send className="h-4 w-4" />
           </Button>
