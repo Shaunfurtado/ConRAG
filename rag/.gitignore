@@ -11,6 +11,7 @@
 
 # production
 /build
+/dist
 
 # misc
 .DS_Store
@@ -23,18 +24,33 @@ yarn-error.log*
 
 # local env files
 .env
-.env*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # database
 rag_conversations.db
 
 # logs
-logs
+logs/
 *.log
-
-# dist directory
-/dist
 
 # temporary files
 /tmp
 /temp
+*.temp
+*.bak
+
+# IDE-specific files
+.vscode/
+.idea/
+*.vscode
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Miscellaneous
+*.swp
+*.swo
