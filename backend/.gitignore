@@ -26,3 +26,23 @@ package-lock.json
 *.log
 *.temp
 *.bak
+
+# Backend-specific files
+/backend/node_modules/
+backend/dist/
+backend/build/
+backend/coverage/
+backend/logs/
+backend/*.log
+backend/*.temp
+backend/*.bak
+backend/.env
+backend/.env*.local
+backend/yarn.lock
+backend/package-lock.json
+backend/.pnp
+backend.pnp.js
+backend/.DS_Store
+backend/.editorconfig
+backend/*.editorconfig
+backend/viminfo
