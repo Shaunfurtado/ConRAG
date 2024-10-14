@@ -9,24 +9,23 @@
 # testing
 /coverage
 
+# next.js
+/.next/
+/out/
+
 # production
 /build
-/dist
 
-# IDE-specific files
-.vscode/
-.idea/
+# misc
 .DS_Store
+*.pem
 
-# Editor-specific files
-.editorconfig
-*.editorconfig
-viminfo
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Auto-generated files
-node_modules/
-yarn.lock
-package-lock.json
+# local env files
 .env
 .env.local
 .env.development.local
@@ -44,8 +43,9 @@ next-env.d.ts
 /logs
 *.log
 
+# dist directory
+/dist
+
 # temporary files
 /tmp
 /temp
-*.temp
-*.bak
