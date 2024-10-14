@@ -22,19 +22,10 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env
 .env*.local
+.env
 
-# database
 rag_conversations.db
 
 # logs
 logs
-*.log
-
-# dist directory
-/dist
-
-# temporary files
-/tmp
-/temp
