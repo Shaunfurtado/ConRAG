@@ -49,3 +49,7 @@ next-env.d.ts
 # temporary files
 /tmp
 /temp
+
+
+# Next.js
+.next/
