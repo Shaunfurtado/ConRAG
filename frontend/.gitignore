@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+!node_modules/.package-lock.json
 /.pnp
 .pnp.js
 .yarn/install-state.gz
@@ -24,7 +25,6 @@
 viminfo
 
 # Auto-generated files
-node_modules/
 yarn.lock
 package-lock.json
 .env
