@@ -2,7 +2,6 @@
 
 # dependencies
 /node_modules
-!node_modules/.package-lock.json
 /.pnp
 .pnp.js
 .yarn/install-state.gz
@@ -18,20 +17,15 @@
 .vscode/
 .idea/
 .DS_Store
+*.pem
 
-# Editor-specific files
-.editorconfig
-*.editorconfig
-viminfo
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Auto-generated files
-yarn.lock
-package-lock.json
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# local env files
+.env*.local
 
 # vercel
 .vercel
