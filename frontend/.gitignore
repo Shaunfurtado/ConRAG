@@ -26,6 +26,7 @@ viminfo
 # Auto-generated files
 node_modules/
 yarn.lock
+package-lock.json
 .env
 .env.local
 .env.development.local
