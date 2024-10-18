@@ -103,22 +103,15 @@ app.get('/documents/:sessionId', async (req: Request, res: Response) => {
 });
 
 // Endpoint to switch conversations based on session ID
-app.post('/switch-llm-model', async (req: Request, res: Response) => {
-  const { modelName } = req.body;
-  
-  // Validate the model name
-  if (modelName !== 'gemini' && modelName !== 'ollama') {
-    return res.status(400).json({ error: 'Invalid model name. Use "gemini" or "ollama".' });
-  }
-
+app.post('/switch-conversation/:sessionId', async (req: Request, res: Response) => {
+  const { sessionId } = req.params;
   try {
-    await ragSystem?.switchModel(modelName); // Switch the model based on the request
-    res.json({ message: `Switched to model: ${modelName}` });
+    await ragSystem?.switchConversation(sessionId);
+    res.json({ message: `Switched to session: ${sessionId}` });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to switch model' });
+    res.status(500).json({ error: 'Failed to switch conversation' });
   }
 });
-
 
 const upload = multer({ dest: 'uploads/' });
 
@@ -147,8 +140,14 @@ app.post('/llm-api-key', async (req: Request, res: Response) => {
 
 app.post('/switch-llm-model', async (req: Request, res: Response) => {
   const { modelName } = req.body;
+  
+  // Validate the model name
+  if (modelName !== 'gemini' && modelName !== 'ollama') {
+    return res.status(400).json({ error: 'Invalid model name. Use "gemini" or "ollama".' });
+  }
+
   try {
-    await ragSystem?.switchModel(modelName);
+    await ragSystem?.switchModel(modelName); // Switch the model based on the request
     res.json({ message: `Switched to model: ${modelName}` });
   } catch (error) {
     res.status(500).json({ error: 'Failed to switch model' });
