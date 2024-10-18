@@ -1,0 +1,187 @@
+{
+  "info": {
+    "name": "ConRAG",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "bruno",
+      "event": []
+    },
+    {
+      "name": "Upload Documents",
+      "event": [],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "auth": null,
+        "description": "",
+        "url": {
+          "raw": "http://localhost:3001/upload",
+          "protocol": "http",
+          "host": [
+            "localhost:3001"
+          ],
+          "path": [
+            "upload"
+          ],
+          "query": [],
+          "variable": []
+        }
+      }
+    },
+    {
+      "name": "Query the RAG System",
+      "event": [],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "auth": null,
+        "description": "",
+        "url": {
+          "raw": "http://localhost:3001/query",
+          "protocol": "http",
+          "host": [
+            "localhost:3001"
+          ],
+          "path": [
+            "query"
+          ],
+          "query": [],
+          "variable": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"Give me the list of the stories you know\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Start a New Conversation",
+      "event": [],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "auth": null,
+        "description": "",
+        "url": {
+          "raw": "http://localhost:3001/new-conversation",
+          "protocol": "http",
+          "host": [
+            "localhost:3001"
+          ],
+          "path": [
+            "new-conversation"
+          ],
+          "query": [],
+          "variable": []
+        }
+      }
+    },
+    {
+      "name": "Retrieve Document Names for a Specific Session",
+      "event": [],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": null,
+        "description": "",
+        "url": {
+          "raw": "http://localhost:3001/documents/sessionId",
+          "protocol": "http",
+          "host": [
+            "localhost:3001"
+          ],
+          "path": [
+            "documents",
+            "sessionId"
+          ],
+          "query": [],
+          "variable": []
+        },
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "sessionId",
+              "value": "ec00d344-9f6a-46dc-8b48-a28c1118493c",
+              "disabled": false,
+              "type": "default"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Switch Conversations",
+      "event": [],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "auth": null,
+        "description": "",
+        "url": {
+          "raw": "http://localhost:3001/switch-conversation/ec00d344-9f6a-46dc-8b48-a28c1118493c",
+          "protocol": "http",
+          "host": [
+            "localhost:3001"
+          ],
+          "path": [
+            "switch-conversation",
+            "ec00d344-9f6a-46dc-8b48-a28c1118493c"
+          ],
+          "query": [],
+          "variable": []
+        },
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "sessionId",
+              "value": "c532aa27-deb8-4ad6-b090-f8897ac9548d",
+              "disabled": true,
+              "type": "default"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Switch LLM Model",
+      "event": [],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "auth": null,
+        "description": "",
+        "url": {
+          "raw": "http://localhost:3001/switch-llm-model",
+          "protocol": "http",
+          "host": [
+            "localhost:3001"
+          ],
+          "path": [
+            "switch-llm-model"
+          ],
+          "query": [],
+          "variable": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"modelName\": \"gemini\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "variable": []
+}
