@@ -22,14 +22,41 @@ export class RAGSystem {
     this.logger = Logger.getInstance();
   }
 
+  // Method to retrieve the document names for a specific session
+  async getDocumentNames(sessionId: string): Promise<{ fileName: string }[]> {
+    const documentNames = await this.databaseService.getDocumentNames(sessionId);
+    return documentNames.map(doc => ({ fileName: doc.file_name }));
+  }
+
+  // Method to handle document uploads and saving them to the vector store and database
+  async saveDocuments(documents: Document[], sessionId: string): Promise<void> {
+    await this.logger.log('Saving uploaded documents');
+    // Save document metadata and contents to the database
+    const documentMetadata = documents.map(doc => ({
+      file_name: doc.metadata.file_name,
+      file_path: doc.metadata.file_path,
+      content: doc.pageContent,
+    }));
+    await this.databaseService.saveDocuments(documentMetadata);
+    
+    // Add documents to the vector store for similarity search
+    await this.vectorStore.addDocuments(documents);
+  }
+
+  // Method to switch between conversations by session ID
+  async switchConversation(sessionId: string): Promise<void> {
+    await this.logger.log(`Switching to session: ${sessionId}`);
+    this.databaseService.switchSession(sessionId);
+  }
+
   async getConversationHistory(): Promise<{ question: string; answer: string }[]> {
     return this.databaseService.getConversationHistory();
   }
 
-  // New method to start a new conversation session
+  // Method to start a new conversation session
   async startNewConversation(): Promise<void> {
     await this.logger.log('Starting a new conversation session');
-    this.databaseService.startNewSession();  // This method will reset the session ID in the DatabaseService
+    this.databaseService.startNewSession(); // Reset session ID in the DatabaseService
   }
 
   async initialize(documents: Document[]): Promise<void> {
@@ -66,7 +93,13 @@ export class RAGSystem {
     };
   }
 
-  // Modify generateContext to handle smaller document chunks
+  // Method to switch LLM models dynamically
+  async switchModel(modelName: 'gemini' | 'ollama'): Promise<void> {
+    await this.logger.log(`Switching to model: ${modelName}`);
+    this.llmService.switchModel(modelName); // Add logic in LLMService to switch models
+  }
+
+  // Method to handle smaller document chunks
   private generateContext(docs: Document[]): string {
     return docs.map(doc => doc.pageContent).join('\n\n');
   }
@@ -99,5 +132,11 @@ A: ${turn.answer}`
 
     return `Previous conversation context:
 ${historyContext}`;
+  }
+
+  // Method to add LLM API key
+  async addLLMApiKey(keyName: string, apiKey: string): Promise<void> {
+    // Implementation for adding LLM API key
+    console.log(`API key for ${keyName} added.`);
   }
 }

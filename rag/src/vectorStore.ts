@@ -1,4 +1,3 @@
-// rag\src\vectorStore.ts
 import { ChromaClient, Collection } from 'chromadb';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from './config';
@@ -17,15 +16,24 @@ export class VectorStore {
     this.sessionId = uuidv4();
   }
 
-  async initialize(documents: Document[]): Promise<void> {
-    await this.logger.log('Initializing vector store');
+  // Initialize vector store and create or load the collection for the current session
+  async initialize(documents: Document[], sessionId?: string): Promise<void> {
+    this.sessionId = sessionId || this.sessionId;
+    await this.logger.log(`Initializing vector store for session: ${this.sessionId}`);
 
     try {
       const collectionName = `rag_collection_${this.sessionId}`;
-      this.collection = await this.client.createCollection({ name: collectionName });
+      const existingCollection = await this.client.listCollections();
+      const collectionExists = existingCollection.some(col => col.name === collectionName);
 
-      // Generate and store embeddings once during initialization
-      await this.addDocuments(documents);
+      if (collectionExists) {
+        await this.logger.log(`Loading existing collection: ${collectionName}`);
+        this.collection = await this.client.getCollection({ name: collectionName });
+      } else {
+        await this.logger.log(`Creating new collection: ${collectionName}`);
+        this.collection = await this.client.createCollection({ name: collectionName });
+        await this.addDocuments(documents);
+      }
 
       await this.logger.log('Vector store initialized successfully');
     } catch (error) {
@@ -34,7 +42,24 @@ export class VectorStore {
     }
   }
 
-  private async addDocuments(documents: Document[]): Promise<void> {
+  // Switch to a different session, which involves switching the collection
+  async switchSession(sessionId: string): Promise<void> {
+    this.sessionId = sessionId;
+    await this.logger.log(`Switching to session: ${sessionId}`);
+    const collectionName = `rag_collection_${this.sessionId}`;
+    const existingCollection = await this.client.listCollections();
+    const collectionExists = existingCollection.some(col => col.name === collectionName);
+
+    if (collectionExists) {
+      this.collection = await this.client.getCollection({ name: collectionName });
+      await this.logger.log(`Loaded collection for session: ${sessionId}`);
+    } else {
+      throw new Error(`Collection for session ${sessionId} does not exist`);
+    }
+  }
+
+  // Add documents and their embeddings to the vector store collection
+  async addDocuments(documents: Document[]): Promise<void> {
     if (!this.collection) {
       throw new Error('Collection not initialized');
     }
@@ -60,6 +85,7 @@ export class VectorStore {
     }
   }
 
+  // Search for similar documents based on query embedding
   async similaritySearch(query: string, k: number = 3): Promise<Document[]> {
     await this.logger.log('Performing similarity search', { query, k });
 
@@ -97,30 +123,31 @@ export class VectorStore {
     }
   }
 
+  // Get embedding from an external API
   private async getEmbedding(text: string): Promise<number[]> {
     try {
-        const response = await fetch('http://localhost:5000/embed', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ text })
-        });
+      const response = await fetch('http://localhost:5000/embed', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text }),
+      });
 
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
 
-        const data = await response.json();
-        return data; // Return the embedding received from Flask API
+      const data = await response.json();
+      return data; // Return the embedding received from Flask API
     } catch (error) {
-        console.error('Error fetching embeddings:', error);
-        throw new Error('Failed to fetch embeddings');
+      console.error('Error fetching embeddings:', error);
+      throw new Error('Failed to fetch embeddings');
     }
-}
+  }
 
+  // Rerank the results based on their scores
   private rerankResults(docs: string[], scores: number[]): string[] {
-    // Sort docs by their scores for reranking
     return docs.sort((a, b) => scores[docs.indexOf(b)] - scores[docs.indexOf(a)]);
   }
 }

@@ -6,47 +6,54 @@ import { Logger } from './logger';
 dotenv.config();
 
 export class LLMService {
-  private ollama: Ollama;
-  private gemini: GoogleGenerativeAI;
+  private ollama!: Ollama;
+  private gemini!: GoogleGenerativeAI;
   private logger: Logger;
-  private useGemini: boolean; // Flag to switch between Ollama and Gemini
+  private currentModel: 'gemini' | 'ollama';
 
   constructor() {
-    // Load API key for Gemini
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
+    this.logger = Logger.getInstance();
+
+    // Initialize with Gemini by default
+    this.currentModel = 'gemini'; // Default to Gemini
+
+    this.initializeModels(); // Initialize the models
+  }
+
+  private initializeModels(): void {
+    // Load API key for Gemini from environment variables
+    const geminiApiKey = process.env.GEMINI_API_KEY;
+    if (!geminiApiKey) {
       throw new Error('Gemini API_KEY is not found');
     }
 
     // Initialize Ollama and Gemini APIs
     this.ollama = new Ollama({
-      baseUrl: 'http://localhost:11434',
+      baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
       model: 'llama3.1',
     });
 
-    this.gemini = new GoogleGenerativeAI(apiKey);
-
-    // Initialize logger
-    this.logger = Logger.getInstance();
-
-    // Set whether to use Gemini (manual condition, change this flag as needed)
-    this.useGemini = true; // Set to true to use Gemini, false to use Ollama
+    this.gemini = new GoogleGenerativeAI(geminiApiKey);
   }
 
-  // Generate response based on the configured API
+  // Switch models dynamically based on user selection
+  async switchModel(modelName: 'gemini' | 'ollama'): Promise<void> {
+    await this.logger.log(`Switching to model: ${modelName}`);
+    this.currentModel = modelName; // Update the current model based on the API request
+  }
+
+  // Generate response based on the current model
   async generateResponse(prompt: string): Promise<string> {
     await this.logger.log('Generating LLM response', { prompt });
 
     let response: string;
 
-    if (this.useGemini) {
-      // Using Gemini
+    if (this.currentModel === 'gemini') {
       await this.logger.log('Using Gemini API');
       const geminiModel = this.gemini.getGenerativeModel({ model: 'gemini-1.5-flash' });
       const result = await geminiModel.generateContent(prompt);
       response = (await result.response.text()).trim();
     } else {
-      // Using Ollama
       await this.logger.log('Using Ollama API');
       response = await this.ollama.call(prompt);
     }
