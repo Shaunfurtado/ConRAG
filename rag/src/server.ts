@@ -1,5 +1,6 @@
 // rag/src/server.ts
 import express, { Request, Response } from 'express';
+import fs from 'fs';
 import { RAGSystem } from './ragSystem';
 import { loadDocuments } from './documentLoader';
 import { Logger } from './logger';
@@ -20,28 +21,41 @@ app.use(express.json());
 
 let ragSystem: RAGSystem | null = null; // Initialize ragSystem as null
 
-async function initializeRAGSystem() {
+async function initializeRAGSystem(files: Express.Multer.File[]) {
   const logger = Logger.getInstance();
   await logger.log('Starting RAG system');
 
-  ragSystem = new RAGSystem();
-  await logger.log('Loading documents');
-  
-  const documentPaths = ['./docs/doc1.txt', './docs/doc2.txt']; // Add more document paths if needed
-  const documents = await loadDocuments(documentPaths);
+  try {
+    // Initialize the RAG system
+    ragSystem = new RAGSystem();
+    
+    if (!files || files.length === 0) {
+      throw new Error('No files provided for initialization');
+    }
 
-  await logger.log('Initializing vector store and adding documents if necessary');
-  await ragSystem.initialize(documents);
-  
-  await logger.log('RAG system initialized successfully');
+    await logger.log('Loading uploaded documents');
+    
+    // Load documents from uploaded files
+    const documents = await loadDocuments(files);  // Pass the file array directly
+
+    await logger.log('Initializing vector store and adding documents if necessary');
+    await ragSystem.initialize(documents);
+
+    await logger.log('RAG system initialized successfully');
+  } catch (error) {
+    await logger.log('Error initializing RAG system', error);
+    throw new Error(`Failed to initialize RAG system: ${(error as Error).message}`);
+  }
 }
 
-// Initialize RAG system once during server startup
-initializeRAGSystem().catch(error => {
+// Initialize RAG system once during server startup (without files)
+// If files are required, call `initializeRAGSystem` after upload in the relevant endpoint
+initializeRAGSystem([]).catch(error => {
   const logger = Logger.getInstance();
   logger.log('Error initializing RAG system', error);
   console.error('Failed to initialize RAG system:', error);
 });
+
 
 // Endpoint to handle user queries
 app.post('/query', async (req: Request, res: Response) => {
@@ -117,26 +131,31 @@ const upload = multer({ dest: 'uploads/' });
 
 app.post('/upload', upload.array('files'), async (req: Request, res: Response) => {
   const files = req.files as Express.Multer.File[];
+
+  if (!files || files.length === 0) {
+    return res.status(400).json({ error: 'No files uploaded' });
+  }
+
   try {
-    const documentPaths = files.map(file => file.path);
-    const documents = await loadDocuments(documentPaths);
-    
-    await ragSystem?.saveDocuments(documents, req.sessionID);
-    res.json({ message: 'Files uploaded and processed' });
+    // Initialize the RAG system with the uploaded files
+    await initializeRAGSystem(files);  // Pass the uploaded files to the initialization function
+
+    res.json({ message: 'Files uploaded and RAG system initialized successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to upload files' });
+    console.error('Error during file upload and RAG initialization:', error);
+    res.status(500).json({ error: 'Failed to upload files and initialize RAG system' });
   }
 });
 
-app.post('/llm-api-key', async (req: Request, res: Response) => {
-  const { keyName, apiKey } = req.body;
-  try {
-    await ragSystem?.addLLMApiKey(keyName, apiKey);
-    res.json({ message: 'LLM API key added' });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to add LLM API key' });
-  }
-});
+// app.post('/llm-api-key', async (req: Request, res: Response) => {
+//   const { keyName, apiKey } = req.body;
+//   try {
+//     await ragSystem?.addLLMApiKey(keyName, apiKey);
+//     res.json({ message: 'LLM API key added' });
+//   } catch (error) {
+//     res.status(500).json({ error: 'Failed to add LLM API key' });
+//   }
+// });
 
 app.post('/switch-llm-model', async (req: Request, res: Response) => {
   const { modelName } = req.body;

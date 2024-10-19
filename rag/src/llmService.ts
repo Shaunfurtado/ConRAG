@@ -1,3 +1,4 @@
+// rag\src\llmService.ts
 import { Ollama } from '@langchain/ollama';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';

@@ -1,3 +1,4 @@
+// rag\src\vectorStore.ts
 import { ChromaClient, Collection } from 'chromadb';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from './config';
@@ -63,27 +64,28 @@ export class VectorStore {
     if (!this.collection) {
       throw new Error('Collection not initialized');
     }
-
+  
     try {
       const ids = documents.map((_, index) => `doc_${index}`);
-      const embeddings = await Promise.all(documents.map(doc => this.getEmbedding(doc.pageContent)));  // Embed once
-
+      const embeddings = await Promise.all(documents.map(doc => this.getEmbedding(doc.pageContent)));  // Embed all documents
+  
       const metadatas = documents.map(doc => doc.metadata);
-
-      // Store document embeddings in Chroma collection
+  
+      // Store document embeddings in the Chroma collection
       await this.collection.add({
         ids,
         embeddings,
         documents: documents.map(doc => doc.pageContent),
         metadatas,
       });
-
+  
       await this.logger.log('Documents added to the vector store');
     } catch (error) {
       await this.logger.log('Error adding documents to the vector store', error);
       throw new Error(`Failed to add documents: ${(error as Error).message}`);
     }
   }
+  
 
   // Search for similar documents based on query embedding
   async similaritySearch(query: string, k: number = 3): Promise<Document[]> {
