@@ -13,7 +13,8 @@ async function main() {
 
     await logger.log('Loading documents');
     const documentPaths = ['./docs/doc1.txt', './docs/doc2.txt']; 
-    const documents = await loadDocuments(documentPaths);
+    const documentObjects = documentPaths.map(path => ({ file_path: path, metadata: { source: path } }));
+    const documents = await loadDocuments(documentObjects);
 
     await logger.log('Initializing vector store and adding documents if necessary');
     await ragSystem.initialize(documents);

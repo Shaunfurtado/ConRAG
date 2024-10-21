@@ -1,150 +1,161 @@
+// rag/src/server.ts
 import express, { Request, Response } from 'express';
+import { RAGSystem } from './ragSystem';
+import { loadDocuments } from './documentLoader';
+import { Logger } from './logger';
 import cors from 'cors';
-import { v4 as uuidv4 } from 'uuid';
-import path from 'path';
-import fs from 'fs/promises';
-
-import { RAGSystem } from '../../rag/src/ragSystem';
-import { loadDocument } from '../../rag/src/documentLoader';
+import multer from 'multer';
+import session from 'express-session';
 
 const app = express();
-const port = 3000;
-
+const port = 3001;
 app.use(cors());
 app.use(express.json());
+app.use(session({
+  secret: 'your-secret-key', // Replace with your secret key
+  resave: false,
+  saveUninitialized: true,
+}));
+app.use(express.json());
 
-let ragSystem: RAGSystem;
+let ragSystem: RAGSystem | null = null; // Initialize ragSystem as null
 
-interface Query {
-  id: string;
-  question: string;
-  answer?: string;
-  status: 'pending' | 'completed';
+async function initializeRAGSystem() {
+  const logger = Logger.getInstance();
+  await logger.log('Starting RAG system');
+
+  ragSystem = new RAGSystem();
+  await logger.log('Loading documents');
+  
+  const documentPaths = ['./docs/doc1.txt', './docs/doc2.txt']; // Add more document paths if needed
+  const documents = await loadDocuments(documentPaths);
+
+  await logger.log('Initializing vector store and adding documents if necessary');
+  await ragSystem.initialize(documents);
+  
+  await logger.log('RAG system initialized successfully');
 }
 
-interface ProcessedQuery {
-  question: string;
-  answer: string | undefined;
-}
+// Initialize RAG system once during server startup
+initializeRAGSystem().catch(error => {
+  const logger = Logger.getInstance();
+  logger.log('Error initializing RAG system', error);
+  console.error('Failed to initialize RAG system:', error);
+});
 
-const queries: Map<string, Query> = new Map();
-const conversations: Map<string, string[]> = new Map();
-
-// Initialize RAG system asynchronously
-(async () => {
-  try {
-    ragSystem = new RAGSystem();
-    const documents = await loadDocument();
-    await ragSystem.initialize(documents);
-    console.log('RAG system initialized');
-  } catch (error) {
-    console.error('Error initializing RAG system:', error);
-  }
-})();
-
-// Create a query
+// Endpoint to handle user queries
 app.post('/query', async (req: Request, res: Response) => {
-  const { question, sessionId } = req.body;
-
-  if (!question || !sessionId) {
-    return res.status(400).json({ error: 'Question and sessionId are required' });
-  }
-
-  const queryId = uuidv4();
-  const query: Query = { id: queryId, question, status: 'pending' };
-  queries.set(queryId, query);
-
-  if (!conversations.has(sessionId)) {
-    conversations.set(sessionId, []);
-  }
-  conversations.get(sessionId)!.push(queryId);
-
-  // Process the query asynchronously
-  processQuery(queryId, sessionId);
-
-  return res.json({ queryId });
+    const logger = Logger.getInstance();
+    const { question } = req.body;
+  
+    // Check if RAG system is initialized
+    if (!ragSystem) {
+      return res.status(503).json({ error: 'RAG system is still initializing. Please try again later.' });
+    }
+  
+    if (!question) {
+      return res.status(400).json({ error: 'Question is required' });
+    }
+  
+    await logger.log('Processing user question', { question });
+  
+    try {
+      const result = await ragSystem.query(question);
+      await logger.log('Question processed successfully', { result });
+  
+      res.json({
+        answer: result.answer,
+        sources: result.sources,
+      });
+    } catch (error) {
+      await logger.log('Error processing question', error);
+      console.error('Error occurred while processing the question:', error);
+      res.status(500).json({ error: 'An error occurred while processing your question' });
+    }
 });
 
-// Fetch a specific reply by query ID
-app.get('/reply/:queryId', (req: Request, res: Response) => {
-  const { queryId } = req.params;
-  const query = queries.get(queryId);
-
-  if (!query) {
-    return res.status(404).json({ error: 'Query not found' });
+// Endpoint to start a new conversation
+app.post('/new-conversation', async (req: Request, res: Response) => {
+  // Check if RAG system is initialized
+  if (!ragSystem) {
+    return res.status(503).json({ error: 'RAG system is still initializing. Please try again later.' });
   }
-
-  if (query.status === 'pending') {
-    return res.json({ status: 'pending' });
+  
+  try {
+    await ragSystem.startNewConversation(); // Start a new conversation
+    res.json({ message: 'New conversation started' });
+  } catch (error) {
+    const logger = Logger.getInstance();
+    await logger.log('Error starting new conversation', error);
+    res.status(500).json({ error: 'Failed to start a new conversation' });
   }
-
-  return res.json({ status: 'completed', answer: query.answer });
 });
 
-// Get conversation history by session ID
-app.get('/conversation/:sessionId', (req: Request, res: Response) => {
+// Endpoint to retrieve document names for a specific session
+app.get('/documents/:sessionId', async (req: Request, res: Response) => {
   const { sessionId } = req.params;
-  const conversationQueries = conversations.get(sessionId) || [];
-
-  const conversationHistory: ProcessedQuery[] = conversationQueries
-    .map(queryId => {
-      const query = queries.get(queryId);
-      return query ? { question: query.question, answer: query.answer } : null;
-    })
-    .filter(q => q !== null) as ProcessedQuery[];
-
-  return res.json(conversationHistory);
-});
-
-// Get all conversations
-app.get('/conversations', (req: Request, res: Response) => {
-  const allConversations = Array.from(conversations.entries()).map(([sessionId, queryIds]) => ({
-    sessionId,
-    queryCount: queryIds.length
-  }));
-
-  return res.json(allConversations);
-});
-
-// Get list of documents
-app.get('/documents', async (req: Request, res: Response) => {
   try {
-    const docsFolder = path.join(__dirname, '../../rag/docs');
-    const files = await fs.readdir(docsFolder);
-    const documents = files.filter(file => file.endsWith('.txt') || file.endsWith('.pdf'));
-
-    return res.json(documents);
+    const rows = await ragSystem?.getDocumentNames(sessionId);
+    res.json(rows);
   } catch (error) {
-    console.error('Error reading documents:', error);
-    return res.status(500).json({ error: 'Failed to retrieve documents' });
+    res.status(500).json({ error: 'Failed to retrieve document names' });
   }
 });
 
-// Upload a new document (to be implemented)
-app.post('/upload', (req: Request, res: Response) => {
-  // Placeholder for future implementation
-  return res.status(501).json({ message: 'Document upload not implemented yet' });
+// Endpoint to switch conversations based on session ID
+app.post('/switch-conversation/:sessionId', async (req: Request, res: Response) => {
+  const { sessionId } = req.params;
+  try {
+    await ragSystem?.switchConversation(sessionId);
+    res.json({ message: `Switched to session: ${sessionId}` });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to switch conversation' });
+  }
 });
 
-// Function to process a query asynchronously
-async function processQuery(queryId: string, sessionId: string) {
-  const query = queries.get(queryId);
-  if (!query) return;
+const upload = multer({ dest: 'uploads/' });
 
+app.post('/upload', upload.array('files'), async (req: Request, res: Response) => {
+  const files = req.files as Express.Multer.File[];
   try {
-    const result = await ragSystem.query(query.question);
-    query.answer = result.answer;
-    query.status = 'completed';
+    const documentPaths = files.map(file => file.path);
+    const documents = await loadDocuments(documentPaths);
+    
+    await ragSystem?.saveDocuments(documents, req.sessionID);
+    res.json({ message: 'Files uploaded and processed' });
   } catch (error) {
-    console.error('Error processing query:', error);
-    query.answer = 'An error occurred while processing the query.';
-    query.status = 'completed';
+    res.status(500).json({ error: 'Failed to upload files' });
+  }
+});
+
+app.post('/llm-api-key', async (req: Request, res: Response) => {
+  const { keyName, apiKey } = req.body;
+  try {
+    await ragSystem?.addLLMApiKey(keyName, apiKey);
+    res.json({ message: 'LLM API key added' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to add LLM API key' });
+  }
+});
+
+app.post('/switch-llm-model', async (req: Request, res: Response) => {
+  const { modelName } = req.body;
+  
+  // Validate the model name
+  if (modelName !== 'gemini' && modelName !== 'ollama') {
+    return res.status(400).json({ error: 'Invalid model name. Use "gemini" or "ollama".' });
   }
 
-  queries.set(queryId, query);
-}
+  try {
+    await ragSystem?.switchModel(modelName); // Switch the model based on the request
+    res.json({ message: `Switched to model: ${modelName}` });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to switch model' });
+  }
+});
+
 
 // Start the Express server
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`RAG system server running at http://localhost:${port}`);
 });

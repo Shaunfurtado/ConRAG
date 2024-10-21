@@ -17,28 +17,11 @@ interface DocumentMetadata {
 export class DatabaseService {
   private db: Database | null = null;
   private logger: Logger;
-  private sessionId: string = ''; // Initialize the session ID
+  private sessionId: string;
 
   constructor() {
     this.logger = Logger.getInstance();
-    this.sessionId = uuidv4();  // Generate a new session ID when the service is initialized
-  }
-
-  // Method to get the current session ID
-  getSessionId(): string {
-    return this.sessionId;  // Return the session ID
-  }
-
-  // Method to reset or start a new session
-  startNewSession(): void {
-    this.sessionId = uuidv4();  // Generate a new session ID
-    this.logger.log(`New session started with sessionId: ${this.sessionId}`);
-  }
-
-  // Method to switch to an existing session
-  switchSession(sessionId: string): void {
-    this.sessionId = sessionId;
-    this.logger.log(`Switched to session: ${this.sessionId}`);
+    this.sessionId = uuidv4();  // Session ID is generated on initialization
   }
 
   async initialize(): Promise<void> {
@@ -121,16 +104,14 @@ export class DatabaseService {
   }
 
   // Retrieve the names of documents for a specific session
-  async getDocumentNames(sessionId: string): Promise<{
-    metadata: any; file_path: string 
-}[]> {
+  async getDocumentNames(sessionId: string): Promise<{ file_name: string }[]> {
     if (!this.db) {
       throw new Error('Database not initialized');
     }
 
     try {
       const rows = await this.db.all(
-        'SELECT file_path FROM documents WHERE session_id = ? ORDER BY timestamp ASC',
+        'SELECT file_name FROM documents WHERE session_id = ? ORDER BY timestamp ASC',
         [sessionId]
       );
       return rows;
@@ -151,10 +132,20 @@ export class DatabaseService {
         'SELECT question, answer FROM conversations WHERE session_id = ? ORDER BY timestamp ASC',
         [this.sessionId]
       );
-      return rows as ConversationTurn[]; 
+      return rows as ConversationTurn[];
     } catch (error) {
       await this.logger.log('Error retrieving conversation history', error);
       throw new Error(`Failed to retrieve conversation history: ${(error as Error).message}`);
     }
+  }
+
+  // Reset session by generating a new session ID
+  startNewSession(): void {
+    this.sessionId = uuidv4();
+  }
+
+  // Switch session to the provided session ID
+  switchSession(sessionId: string): void {
+    this.sessionId = sessionId;
   }
 }

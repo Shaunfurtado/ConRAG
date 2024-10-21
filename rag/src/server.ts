@@ -36,7 +36,8 @@ async function initializeRAGSystem(files: Express.Multer.File[]) {
     await logger.log('Loading uploaded documents');
     
     // Load documents from uploaded files
-    const documents = await loadDocuments(files);  // Pass the file array directly
+    const filePaths = files.map(file => ({ file_path: file.path, metadata: { source: file.originalname } }));  // Map file paths to the expected format
+    const documents = await loadDocuments(filePaths);  // Pass the mapped file paths to the loadDocuments function
 
     await logger.log('Initializing vector store and adding documents if necessary');
     await ragSystem.initialize(documents);
@@ -55,7 +56,6 @@ initializeRAGSystem([]).catch(error => {
   logger.log('Error initializing RAG system', error);
   console.error('Failed to initialize RAG system:', error);
 });
-
 
 // Endpoint to handle user queries
 app.post('/query', async (req: Request, res: Response) => {
@@ -130,6 +130,7 @@ app.post('/switch-conversation/:sessionId', async (req: Request, res: Response) 
 const upload = multer({ dest: 'uploads/' });
 
 app.post('/upload', upload.array('files'), async (req: Request, res: Response) => {
+  const logger = Logger.getInstance();
   const files = req.files as Express.Multer.File[];
 
   if (!files || files.length === 0) {
@@ -137,11 +138,15 @@ app.post('/upload', upload.array('files'), async (req: Request, res: Response) =
   }
 
   try {
+    await logger.log('Files uploaded', { files: files.map(file => file.originalname) });
+
     // Initialize the RAG system with the uploaded files
     await initializeRAGSystem(files);  // Pass the uploaded files to the initialization function
 
+    await logger.log('Files saved to the database');
     res.json({ message: 'Files uploaded and RAG system initialized successfully' });
   } catch (error) {
+    await logger.log('Error during file upload and RAG initialization', error);
     console.error('Error during file upload and RAG initialization:', error);
     res.status(500).json({ error: 'Failed to upload files and initialize RAG system' });
   }
