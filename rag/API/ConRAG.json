@@ -9,28 +9,6 @@
       "event": []
     },
     {
-      "name": "Upload Documents",
-      "event": [],
-      "request": {
-        "method": "POST",
-        "header": [],
-        "auth": null,
-        "description": "",
-        "url": {
-          "raw": "http://localhost:3001/upload",
-          "protocol": "http",
-          "host": [
-            "localhost:3001"
-          ],
-          "path": [
-            "upload"
-          ],
-          "query": [],
-          "variable": []
-        }
-      }
-    },
-    {
       "name": "Query the RAG System",
       "event": [],
       "request": {
@@ -52,12 +30,46 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"question\": \"Give me the list of the stories you know\"\n}\n",
+          "raw": "{\n  \"question\": \"explain about the story of The Oracle at the Adelphi\"\n}\n",
           "options": {
             "raw": {
               "language": "json"
             }
           }
+        }
+      }
+    },
+    {
+      "name": "Retrieve Document Names for a Specific Session",
+      "event": [],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": null,
+        "description": "",
+        "url": {
+          "raw": "http://localhost:3001/documents/3fb9a26f-9cff-4ee8-9d81-e819f648850e",
+          "protocol": "http",
+          "host": [
+            "localhost:3001"
+          ],
+          "path": [
+            "documents",
+            "3fb9a26f-9cff-4ee8-9d81-e819f648850e"
+          ],
+          "query": [],
+          "variable": []
+        },
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "sessionId",
+              "value": "ec00d344-9f6a-46dc-8b48-a28c1118493c",
+              "disabled": false,
+              "type": "default"
+            }
+          ]
         }
       }
     },
@@ -84,40 +96,6 @@
       }
     },
     {
-      "name": "Retrieve Document Names for a Specific Session",
-      "event": [],
-      "request": {
-        "method": "GET",
-        "header": [],
-        "auth": null,
-        "description": "",
-        "url": {
-          "raw": "http://localhost:3001/documents/sessionId",
-          "protocol": "http",
-          "host": [
-            "localhost:3001"
-          ],
-          "path": [
-            "documents",
-            "sessionId"
-          ],
-          "query": [],
-          "variable": []
-        },
-        "body": {
-          "mode": "urlencoded",
-          "urlencoded": [
-            {
-              "key": "sessionId",
-              "value": "ec00d344-9f6a-46dc-8b48-a28c1118493c",
-              "disabled": false,
-              "type": "default"
-            }
-          ]
-        }
-      }
-    },
-    {
       "name": "Switch Conversations",
       "event": [],
       "request": {
@@ -126,14 +104,14 @@
         "auth": null,
         "description": "",
         "url": {
-          "raw": "http://localhost:3001/switch-conversation/ec00d344-9f6a-46dc-8b48-a28c1118493c",
+          "raw": "http://localhost:3001/switch-conversation/3fb9a26f-9cff-4ee8-9d81-e819f648850e",
           "protocol": "http",
           "host": [
             "localhost:3001"
           ],
           "path": [
             "switch-conversation",
-            "ec00d344-9f6a-46dc-8b48-a28c1118493c"
+            "3fb9a26f-9cff-4ee8-9d81-e819f648850e"
           ],
           "query": [],
           "variable": []
@@ -174,6 +152,120 @@
         "body": {
           "mode": "raw",
           "raw": "{\n  \"modelName\": \"gemini\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Upload Documents",
+      "event": [],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "auth": null,
+        "description": "",
+        "url": {
+          "raw": "http://localhost:3001/upload",
+          "protocol": "http",
+          "host": [
+            "localhost:3001"
+          ],
+          "path": [
+            "upload"
+          ],
+          "query": [],
+          "variable": []
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "files",
+              "value": [
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\The Oracle at the Adelphi.txt"
+              ],
+              "disabled": false,
+              "type": "default"
+            },
+            {
+              "key": "files",
+              "value": [
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\Letting Go.txt"
+              ],
+              "disabled": true,
+              "type": "default"
+            },
+            {
+              "key": "files",
+              "value": [
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\Bottom Feeders.txt"
+              ],
+              "disabled": true,
+              "type": "default"
+            },
+            {
+              "key": "files",
+              "value": [
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\The Lies of Sleeping Dogs.txt"
+              ],
+              "disabled": true,
+              "type": "default"
+            },
+            {
+              "key": "files",
+              "value": [
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\The Other Woman.txt"
+              ],
+              "disabled": true,
+              "type": "default"
+            },
+            {
+              "key": "files",
+              "value": [
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\Knight Errant.txt"
+              ],
+              "disabled": true,
+              "type": "default"
+            },
+            {
+              "key": "files",
+              "value": [
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\Celia's Shrine.txt"
+              ],
+              "disabled": true,
+              "type": "default"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Meta AI API",
+      "event": [],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "auth": null,
+        "description": "",
+        "url": {
+          "raw": "http://localhost:5000/metaai",
+          "protocol": "http",
+          "host": [
+            "localhost:5000"
+          ],
+          "path": [
+            "metaai"
+          ],
+          "query": [],
+          "variable": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"prompt\": \"which is the tallest building, and also what do you think of elon musk\"\n}",
           "options": {
             "raw": {
               "language": "json"

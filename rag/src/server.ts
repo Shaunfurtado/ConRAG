@@ -147,16 +147,6 @@ app.post('/upload', upload.array('files'), async (req: Request, res: Response) =
   }
 });
 
-// app.post('/llm-api-key', async (req: Request, res: Response) => {
-//   const { keyName, apiKey } = req.body;
-//   try {
-//     await ragSystem?.addLLMApiKey(keyName, apiKey);
-//     res.json({ message: 'LLM API key added' });
-//   } catch (error) {
-//     res.status(500).json({ error: 'Failed to add LLM API key' });
-//   }
-// });
-
 app.post('/switch-llm-model', async (req: Request, res: Response) => {
   const { modelName } = req.body;
   
@@ -172,7 +162,6 @@ app.post('/switch-llm-model', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to switch model' });
   }
 });
-
 
 // Start the Express server
 app.listen(port, () => {
