@@ -138,9 +138,21 @@ A: ${turn.answer}`
 ${historyContext}`;
   }
 
-  // Method to add LLM API key
-  async addLLMApiKey(keyName: string, apiKey: string): Promise<void> {
-    // Implementation for adding LLM API key
-    console.log(`API key for ${keyName} added.`);
+  // Method to load documents from files
+  private async loadDocuments(files: (Express.Multer.File | { file_path: string, metadata: { source: string } })[]): Promise<Document[]> {
+    return Promise.all(files.map(async file => {
+      if ('buffer' in file) {
+        return {
+          pageContent: file.buffer.toString('utf-8'),
+          metadata: { source: file.originalname }
+        };
+      } else {
+        const content = await fs.promises.readFile(file.file_path, 'utf-8');
+        return {
+          pageContent: content,
+          metadata: { source: file.metadata.source }  // Use source from metadata
+        };
+      }
+    }));
   }
 }
