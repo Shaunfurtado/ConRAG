@@ -1,6 +1,8 @@
 # ConRAG
 Conversational AI with RAG for Document-Based Queries with natural speech.
 
+Refer Documentation: [DOCS](https://shaunfurtado.is-a.dev/ConRAG-docs/)
+
 ## *Tech stack:*
 
 * Next.js typescript frontend
