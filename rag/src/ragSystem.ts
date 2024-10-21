@@ -159,12 +159,6 @@ A: ${turn.answer}`
 ${historyContext}`;
   }
 
-  // Method to add LLM API key
-  async addLLMApiKey(keyName: string, apiKey: string): Promise<void> {
-    // Implementation for adding LLM API key
-    console.log(`API key for ${keyName} added.`);
-  }
-
   // Method to load documents from files
   private async loadDocuments(files: (Express.Multer.File | { file_path: string, metadata: { source: string } })[]): Promise<Document[]> {
     return Promise.all(files.map(async file => {
