@@ -3,6 +3,7 @@ import { LLMService } from './llmService';
 import { DatabaseService } from './databaseService';
 import { QueryResult } from './types';
 import { Logger } from './logger';
+import * as fs from 'fs';
 
 interface Document {
   pageContent: string;
