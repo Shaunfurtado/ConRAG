@@ -53,11 +53,13 @@ export class LLMService {
     } else if (this.currentModel === 'ollama') {
       await this.logger.log('Using Ollama API');
       response = await this.ollama.call(prompt);
-    } else {
-      // Call Meta AI via Python server
+    } else if(this.currentModel === 'metaai') {
       await this.logger.log('Using Meta AI API');
       const metaAiResponse = await axios.post('http://localhost:5000/metaai', { prompt });
       response = metaAiResponse.data.response;
+    }
+    else {
+      throw new Error('Invalid model name');
     }
 
     await this.logger.log('LLM response generated', { response });

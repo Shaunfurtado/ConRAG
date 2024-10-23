@@ -168,7 +168,7 @@ app.post('/switch-llm-model', async (req: Request, res: Response) => {
   const { modelName } = req.body;
   
   // Validate the model name
-  if (modelName !== 'gemini' && modelName !== 'ollama') {
+  if (modelName !== 'gemini' && modelName !== 'ollama' && modelName !== 'metaai') {
     return res.status(400).json({ error: 'Invalid model name. Use "gemini" or "ollama".' });
   }
 
