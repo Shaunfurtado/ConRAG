@@ -10,6 +10,9 @@ export class VectorStore {
   private collection: Collection | null = null;
   private logger: Logger;
   private sessionId: string;
+  isInitialized(): boolean {
+    return this.collection != null;  // Return true if the collection is initialized
+  }
 
   constructor() {
     this.client = new ChromaClient({ path: config.chromaDbPath });
@@ -33,7 +36,10 @@ export class VectorStore {
       } else {
         await this.logger.log(`Creating new collection: ${collectionName}`);
         this.collection = await this.client.createCollection({ name: collectionName });
-        await this.addDocuments(documents);
+      }
+
+      if (documents.length > 0) {
+        await this.addDocuments(documents);  // Add documents if provided
       }
 
       await this.logger.log('Vector store initialized successfully');
@@ -47,6 +53,7 @@ export class VectorStore {
   async switchSession(sessionId: string): Promise<void> {
     this.sessionId = sessionId;
     await this.logger.log(`Switching to session: ${sessionId}`);
+
     const collectionName = `rag_collection_${this.sessionId}`;
     const existingCollection = await this.client.listCollections();
     const collectionExists = existingCollection.some(col => col.name === collectionName);
@@ -58,19 +65,18 @@ export class VectorStore {
       throw new Error(`Collection for session ${sessionId} does not exist`);
     }
   }
-
   // Add documents and their embeddings to the vector store collection
   async addDocuments(documents: Document[]): Promise<void> {
     if (!this.collection) {
       throw new Error('Collection not initialized');
     }
-  
+
     try {
       const ids = documents.map((_, index) => `doc_${index}`);
       const embeddings = await Promise.all(documents.map(doc => this.getEmbedding(doc.pageContent)));  // Embed all documents
-  
-      const metadatas = documents.map(doc => doc.metadata);
-  
+
+      const metadatas = documents.map(doc => ({ ...doc.metadata }));
+
       // Store document embeddings in the Chroma collection
       await this.collection.add({
         ids,
@@ -78,14 +84,13 @@ export class VectorStore {
         documents: documents.map(doc => doc.pageContent),
         metadatas,
       });
-  
+
       await this.logger.log('Documents added to the vector store');
     } catch (error) {
       await this.logger.log('Error adding documents to the vector store', error);
       throw new Error(`Failed to add documents: ${(error as Error).message}`);
     }
   }
-  
 
   // Search for similar documents based on query embedding
   async similaritySearch(query: string, k: number = 3): Promise<Document[]> {
@@ -117,7 +122,12 @@ export class VectorStore {
 
       return rankedResults.map((doc, index) => ({
         pageContent: doc || '',
-        metadata: results.metadatas?.[0]?.[index] || {},
+        metadata: {
+          source: String(results.metadatas?.[0]?.[index]?.source || ''),
+          file_name: String(results.metadatas?.[0]?.[index]?.file_name || ''),
+          file_path: String(results.metadatas?.[0]?.[index]?.file_path || ''),
+          ...results.metadatas?.[0]?.[index],
+        },
       }));
     } catch (error) {
       await this.logger.log('Error in similarity search', error);

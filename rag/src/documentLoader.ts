@@ -1,3 +1,4 @@
+// rag\src\documentLoader.ts
 import fs from 'fs/promises';
 import { Document } from 'langchain/document';
 import { Logger } from './logger';
@@ -15,28 +16,22 @@ function chunkDocument(content: string, chunkSize: number = 200): string[] {
   return chunks;
 }
 
-export async function loadDocuments(files: (Express.Multer.File | { file_path: string, metadata: { source: string } })[]): Promise<Document[]> {
+export async function loadDocuments(files: Express.Multer.File[]): Promise<Document[]> {
   const logger = Logger.getInstance();
-  await logger.log('Loading documents from files', { files });
+  await logger.log('Loading documents from file uploads', { files: files.map(f => f.originalname) });
 
   const documents: Document[] = [];
 
   for (const file of files) {
-    let content: string;
-    let source: string;
-
-    if ('buffer' in file) {
-      content = file.buffer.toString('utf-8');
-      source = file.originalname;
-    } else {
-      content = await fs.readFile(file.file_path, 'utf-8');
-      source = file.metadata.source;
+    if (!file.path) {
+      throw new Error(`File path is undefined for file: ${file.originalname}`);
     }
 
+    const content = await fs.readFile(file.path, 'utf-8');
     const documentChunks = chunkDocument(content);
     const docChunks = documentChunks.map((chunk, index) => new Document({
       pageContent: chunk,
-      metadata: { source, chunk: index },
+      metadata: { source: file.originalname, path: file.path, chunk: index },
     }));
     documents.push(...docChunks);
   }

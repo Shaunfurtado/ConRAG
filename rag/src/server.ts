@@ -23,12 +23,16 @@ let ragSystem: RAGSystem | null = null; // Initialize ragSystem as null
 
 async function initializeRAGSystem(files: Express.Multer.File[]) {
   const logger = Logger.getInstance();
-  await logger.log('Starting RAG system');
+  await logger.log('Starting RAG system initialization');
 
   try {
-    // Initialize the RAG system
-    ragSystem = new RAGSystem();
-    
+    // Check if RAG system is already initialized
+    if (!ragSystem) {
+      // Initialize the RAG system only if it's not already initialized
+      ragSystem = new RAGSystem();
+      await ragSystem.databaseService.initialize();  // Ensure database is initialized
+    }
+
     if (!files || files.length === 0) {
       throw new Error('No files provided for initialization');
     }
@@ -36,11 +40,25 @@ async function initializeRAGSystem(files: Express.Multer.File[]) {
     await logger.log('Loading uploaded documents');
     
     // Load documents from uploaded files
-    const filePaths = files.map(file => ({ file_path: file.path, metadata: { source: file.originalname } }));  // Map file paths to the expected format
-    const documents = await loadDocuments(filePaths);  // Pass the mapped file paths to the loadDocuments function
+    const documents = await loadDocuments(files);
 
-    await logger.log('Initializing vector store and adding documents if necessary');
-    await ragSystem.initialize(documents);
+    // **Get the current session ID from the RAGSystem**
+    const sessionId = ragSystem.databaseService.getSessionId();  // Use the existing session ID
+
+    // Save document metadata to the database using the current session ID
+    const documentMetadata = files.map(file => ({
+      file_name: file.originalname,
+      file_path: file.path
+    }));
+    await ragSystem.databaseService.saveDocuments(documentMetadata);  // Save metadata under the same session ID
+
+    // **Ensure VectorStore is initialized**
+    if (!ragSystem.vectorStore.isInitialized()) {
+      await ragSystem.initialize(documents);  // Initialize vector store with documents
+    } else {
+      // Add documents to the vector store for similarity search
+      await ragSystem.addDocumentsToVectorStore(documents);  // Avoid re-initializing vector store
+    }
 
     await logger.log('RAG system initialized successfully');
   } catch (error) {
@@ -48,14 +66,6 @@ async function initializeRAGSystem(files: Express.Multer.File[]) {
     throw new Error(`Failed to initialize RAG system: ${(error as Error).message}`);
   }
 }
-
-// Initialize RAG system once during server startup (without files)
-// If files are required, call `initializeRAGSystem` after upload in the relevant endpoint
-initializeRAGSystem([]).catch(error => {
-  const logger = Logger.getInstance();
-  logger.log('Error initializing RAG system', error);
-  console.error('Failed to initialize RAG system:', error);
-});
 
 // Endpoint to handle user queries
 app.post('/query', async (req: Request, res: Response) => {
@@ -127,10 +137,9 @@ app.post('/switch-conversation/:sessionId', async (req: Request, res: Response) 
   }
 });
 
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({ dest: 'data/uploads/' });
 
 app.post('/upload', upload.array('files'), async (req: Request, res: Response) => {
-  const logger = Logger.getInstance();
   const files = req.files as Express.Multer.File[];
 
   if (!files || files.length === 0) {
@@ -138,15 +147,18 @@ app.post('/upload', upload.array('files'), async (req: Request, res: Response) =
   }
 
   try {
-    await logger.log('Files uploaded', { files: files.map(file => file.originalname) });
+    // **Reuse the current session**, don't create a new one
+    if (!ragSystem) {
+      // Initialize the RAG system if it's not already initialized
+      ragSystem = new RAGSystem();
+      await ragSystem.databaseService.initialize();  // Ensure database is initialized
+    }
 
-    // Initialize the RAG system with the uploaded files
-    await initializeRAGSystem(files);  // Pass the uploaded files to the initialization function
+    // Upload documents and link them to the existing session
+    await initializeRAGSystem(files);
 
-    await logger.log('Files saved to the database');
-    res.json({ message: 'Files uploaded and RAG system initialized successfully' });
+    res.json({ message: 'Files uploaded and added to the current session successfully' });
   } catch (error) {
-    await logger.log('Error during file upload and RAG initialization', error);
     console.error('Error during file upload and RAG initialization:', error);
     res.status(500).json({ error: 'Failed to upload files and initialize RAG system' });
   }
@@ -167,6 +179,7 @@ app.post('/switch-llm-model', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to switch model' });
   }
 });
+
 
 // Start the Express server
 app.listen(port, () => {
