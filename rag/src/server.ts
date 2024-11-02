@@ -126,6 +126,22 @@ app.get('/documents/:sessionId', async (req: Request, res: Response) => {
   }
 });
 
+app.get('/sessions', async (req: Request, res: Response) => {
+  const logger = Logger.getInstance();
+  
+  if (!ragSystem) {
+    return res.status(503).json({ error: 'RAG system is still initializing. Please try again later.' });
+  }
+
+  try {
+    const sessionIds = ragSystem.databaseService.getAllSessionIds(); 
+    res.json({ sessionIds });
+  } catch (error) {
+    await logger.log('Error retrieving session IDs', error);
+    res.status(500).json({ error: 'Failed to retrieve session IDs' });
+  }
+});
+
 // Endpoint to switch conversations based on session ID
 app.post('/switch-conversation/:sessionId', async (req: Request, res: Response) => {
   const { sessionId } = req.params;

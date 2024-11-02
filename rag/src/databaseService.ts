@@ -18,11 +18,13 @@ interface DocumentMetadata {
 export class DatabaseService {
   public db: Database | null = null;
   private logger: Logger;
-  private sessionId: string = ''; // Initialize the session ID
+  private sessionId: string = '';
+  private sessionIds: string[] = [];
 
   constructor() {
     this.logger = Logger.getInstance();
-    this.sessionId = uuidv4();  // Generate a new session ID when the service is initialized
+    this.sessionId = uuidv4();
+    this.sessionIds.push(this.sessionId);
   }
 
   // Method to get the current session ID
@@ -33,6 +35,7 @@ export class DatabaseService {
   // Method to reset or start a new session
   startNewSession(): void {
     this.sessionId = uuidv4();  // Generate a new session ID
+    this.sessionIds.push(this.sessionId);
     this.logger.log(`New session started with sessionId: ${this.sessionId}`);
   }
 
@@ -40,6 +43,10 @@ export class DatabaseService {
   switchSession(sessionId: string): void {
     this.sessionId = sessionId;
     this.logger.log(`Switched to session: ${this.sessionId}`);
+  }
+
+  getAllSessionIds(): string[] {
+    return this.sessionIds; 
   }
 
   async initialize(): Promise<void> {

@@ -1,11 +1,15 @@
 "use client";
-
+import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { atomDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import remarkGfm from "remark-gfm";
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { FaPlus } from "react-icons/fa6";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +41,12 @@ declare global {
   }
 }
 
+type Message = {
+  id: string;
+  content: string;
+  sender: "user" | "ai";
+};
+
 export function AdvancedRagAssistant() {
   const [activeTab, setActiveTab] = useState("chat");
   const [activeProfile, setActiveProfile] = useState("General");
@@ -46,8 +56,59 @@ export function AdvancedRagAssistant() {
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef<any>(null);
-  const [inputText, setInputText] = useState("");
-  const [inputPlaceholder, setInputPlaceholder] = useState("Type your message...");
+  const [inputText, setInputText] = useState(""); // Now using this as main input state
+  const [inputPlaceholder, setInputPlaceholder] = useState(
+    "Type your message..."
+  );
+
+  const [messages, setMessages] = useState<Message[]>([
+    { id: "1", content: "Hello! How can I assist you today?", sender: "ai" },
+  ]);
+  const [loading, setLoading] = useState(false);
+
+  const handleSendMessage = async () => {
+    if (inputText.trim()) {
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        content: inputText,
+        sender: "user",
+      };
+      setMessages((prevMessages) => [...prevMessages, userMessage]);
+      setInputText("");
+      setLoading(true);
+
+      try {
+        const response = await fetch("http://localhost:3001/query", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ question: userMessage.content }),
+        });
+
+        const data = await response.json();
+        const aiMessage: Message = {
+          id: Date.now().toString(),
+          content: data.answer || "Sorry, something went wrong.",
+          sender: "ai",
+        };
+
+        setMessages((prevMessages) => [...prevMessages, aiMessage]);
+      } catch (error) {
+        console.error("Error fetching AI response:", error);
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            id: Date.now().toString(),
+            content: "Error fetching response from server.",
+            sender: "ai",
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
   const startRecording = () => {
     setIsRecording(true);
@@ -110,6 +171,10 @@ export function AdvancedRagAssistant() {
           <h3 className="mb-2 text-sm font-semibold text-gray-400">
             Chat History
           </h3>
+          <button className="p-1 hover:bg-gray-700 rounded flex flex-row space-x-2 border border-b-2">
+            <h3>New Chat</h3>
+            <FaPlus size={18} className="text-gray-400 mt-1" />{" "}
+          </button>
           <ul className="space-y-2">
             {["Chat 1", "Chat 2", "Chat 3", "Chat 4"].map((chat) => (
               <li
@@ -160,41 +225,76 @@ export function AdvancedRagAssistant() {
         {/* Chat/Avatar Area */}
         <div className="flex-1 overflow-hidden">
           {activeTab === "chat" ? (
-            <ScrollArea className="h-full p-4">
-              {/* Chat messages would go here */}
-              <div className="space-y-4">
-                <div className="flex items-start">
-                  <Avatar className="mr-2">
-                    <AvatarImage
-                      src="/placeholder.svg?height=40&width=40"
-                      alt="AI"
-                    />
-                    <AvatarFallback>AI</AvatarFallback>
-                  </Avatar>
-                  <div className="bg-gray-700 rounded-lg p-3 max-w-[80%]">
-                    <p className="text-sm">
-                      Hello! How can I assist you today?
-                    </p>
-                    <span className="text-xs text-gray-400 mt-1">12:34 PM</span>
+            <ScrollArea className="flex-1 p-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${
+                    message.sender === "user" ? "justify-end" : "justify-start"
+                  } mb-4`}
+                >
+                  <div
+                    className={`flex ${
+                      message.sender === "user"
+                        ? "flex-row-reverse"
+                        : "flex-row"
+                    } items-start`}
+                  >
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage
+                        src={
+                          message.sender === "user"
+                            ? "/placeholder.svg?height=32&width=32"
+                            : "/placeholder.svg?height=32&width=32&text=AI"
+                        }
+                      />
+                      <AvatarFallback>
+                        {message.sender === "user" ? "U" : "AI"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div
+                      className={`mx-2 p-3 rounded-lg ${
+                        message.sender === "user"
+                          ? "bg-blue-500 text-white"
+                          : "bg-white dark:bg-gray-800 text-gray-800 dark:text-white"
+                      }`}
+                    >
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          code({
+                            node,
+                            inline,
+                            className,
+                            children,
+                            ...props
+                          }) {
+                            const match = /language-(\w+)/.exec(
+                              className || ""
+                            );
+                            return !inline && match ? (
+                              <SyntaxHighlighter
+                                {...props}
+                                children={String(children).replace(/\n$/, "")}
+                                style={atomDark}
+                                language={match[1]}
+                                PreTag="div"
+                              />
+                            ) : (
+                              <code {...props} className={className}>
+                                {children}
+                              </code>
+                            );
+                          },
+                        }}
+                        className="prose dark:prose-invert max-w-none"
+                      >
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-start justify-end">
-                  <div className="bg-blue-600 rounded-lg p-3 max-w-[80%]">
-                    <p className="text-sm">
-                      Can you help me with my research on climate change?
-                    </p>
-                    <span className="text-xs text-gray-300 mt-1">12:35 PM</span>
-                  </div>
-                  <Avatar className="ml-2">
-                    <AvatarImage
-                      src="/placeholder.svg?height=40&width=40"
-                      alt="User"
-                    />
-                    <AvatarFallback>U</AvatarFallback>
-                  </Avatar>
-                </div>
-                {/* More messages would be added here */}
-              </div>
+              ))}
             </ScrollArea>
           ) : (
             <div className="h-full flex flex-col items-center justify-center">
@@ -247,8 +347,14 @@ export function AdvancedRagAssistant() {
           >
             <PaperclipIcon className="h-4 w-4" />
           </Button>
-          <Input className="flex-1 bg-gray-700" placeholder={inputPlaceholder} value={inputText} onChange={(e) => setInputText(e.target.value)} />
-          <Button className="ml-2">
+          <Input
+            className="flex-1 bg-gray-700"
+            placeholder={inputPlaceholder}
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+          />
+          <Button className="ml-2" onClick={handleSendMessage}>
             <Send className="h-4 w-4" />
           </Button>
         </div>
