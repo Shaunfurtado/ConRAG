@@ -1,0 +1,296 @@
+{
+  "name": "ConRAG",
+  "version": "1",
+  "items": [
+    {
+      "type": "http",
+      "name": "Meta AI API",
+      "seq": 8,
+      "request": {
+        "url": "http://localhost:5000/metaai",
+        "method": "POST",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "{\n  \"prompt\": \"which is the tallest building, and also what do you think of elon musk\"\n}",
+          "formUrlEncoded": [],
+          "multipartForm": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "auth": {
+          "mode": "none"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Query the RAG System",
+      "seq": 3,
+      "request": {
+        "url": "http://localhost:3001/query",
+        "method": "POST",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "{\n  \"question\": \"tell me about henry\"\n}\n",
+          "formUrlEncoded": [
+            {
+              "name": "question",
+              "value": "What is AI?",
+              "enabled": true
+            }
+          ],
+          "multipartForm": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "auth": {
+          "mode": "none"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Retrieve All Session Ids",
+      "seq": 9,
+      "request": {
+        "url": "http://localhost:3001/sessions",
+        "method": "GET",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "",
+          "formUrlEncoded": [],
+          "multipartForm": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "auth": {
+          "mode": "none"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Retrieve Document Names for a Specific Session",
+      "seq": 5,
+      "request": {
+        "url": "http://localhost:3001/documents/:session-id",
+        "method": "GET",
+        "headers": [],
+        "params": [
+          {
+            "name": "session-id",
+            "value": "52b6b6c7-23ce-4f70-a39f-bddf1e119518",
+            "type": "path",
+            "enabled": true
+          }
+        ],
+        "body": {
+          "mode": "none",
+          "formUrlEncoded": [],
+          "multipartForm": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "auth": {
+          "mode": "none"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Start a New Conversation",
+      "seq": 4,
+      "request": {
+        "url": "http://localhost:3001/new-conversation",
+        "method": "POST",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "none",
+          "formUrlEncoded": [],
+          "multipartForm": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "auth": {
+          "mode": "none"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Switch Conversations",
+      "seq": 6,
+      "request": {
+        "url": "http://localhost:3001/switch-conversation/09844e08-8147-4c4c-81d4-2f5ba00c6a22",
+        "method": "POST",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "formUrlEncoded",
+          "formUrlEncoded": [
+            {
+              "name": "sessionId",
+              "value": "c532aa27-deb8-4ad6-b090-f8897ac9548d",
+              "enabled": false
+            }
+          ],
+          "multipartForm": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "auth": {
+          "mode": "none"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Switch LLM Model",
+      "seq": 7,
+      "request": {
+        "url": "http://localhost:3001/switch-llm-model",
+        "method": "POST",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "{\n  \"modelName\": \"ollama\"\n}\n",
+          "formUrlEncoded": [],
+          "multipartForm": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "auth": {
+          "mode": "none"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Upload Documents",
+      "seq": 2,
+      "request": {
+        "url": "http://localhost:3001/upload",
+        "method": "POST",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "multipartForm",
+          "formUrlEncoded": [],
+          "multipartForm": [
+            {
+              "type": "file",
+              "name": "files",
+              "value": [
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\an_introduction_to_parallel_programming_-_peter_s._pacheco.txt"
+              ],
+              "enabled": true
+            },
+            {
+              "type": "file",
+              "name": "files",
+              "value": [
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\Explain various Cloud security risks.pdf"
+              ],
+              "enabled": true
+            },
+            {
+              "type": "file",
+              "name": "files",
+              "value": [
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\Letting Go.txt"
+              ],
+              "enabled": false
+            },
+            {
+              "type": "file",
+              "name": "files",
+              "value": [
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\The Oracle at the Adelphi.txt"
+              ],
+              "enabled": false
+            },
+            {
+              "type": "file",
+              "name": "files",
+              "value": [
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\Bottom Feeders.txt"
+              ],
+              "enabled": false
+            },
+            {
+              "type": "file",
+              "name": "files",
+              "value": [
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\The Lies of Sleeping Dogs.txt"
+              ],
+              "enabled": false
+            },
+            {
+              "type": "file",
+              "name": "files",
+              "value": [
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\The Other Woman.txt"
+              ],
+              "enabled": false
+            },
+            {
+              "type": "file",
+              "name": "files",
+              "value": [
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\Knight Errant.txt"
+              ],
+              "enabled": false
+            },
+            {
+              "type": "file",
+              "name": "files",
+              "value": [
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\Celia's Shrine.txt"
+              ],
+              "enabled": false
+            }
+          ]
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "auth": {
+          "mode": "none"
+        }
+      }
+    }
+  ],
+  "environments": [],
+  "brunoConfig": {
+    "version": "1",
+    "name": "ConRAG",
+    "type": "collection",
+    "ignore": [
+      "node_modules",
+      ".git"
+    ]
+  }
+}

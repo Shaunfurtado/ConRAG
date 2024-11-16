@@ -9,6 +9,37 @@
       "event": []
     },
     {
+      "name": "Meta AI API",
+      "event": [],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "auth": null,
+        "description": "",
+        "url": {
+          "raw": "http://localhost:5000/metaai",
+          "protocol": "http",
+          "host": [
+            "localhost:5000"
+          ],
+          "path": [
+            "metaai"
+          ],
+          "query": [],
+          "variable": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"prompt\": \"which is the tallest building, and also what do you think of elon musk\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "Query the RAG System",
       "event": [],
       "request": {
@@ -30,7 +61,37 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"question\": \"explain about the story of The Oracle at the Adelphi\"\n}\n",
+          "raw": "{\n  \"question\": \"tell me about henry\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Retrieve All Session Ids",
+      "event": [],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": null,
+        "description": "",
+        "url": {
+          "raw": "http://localhost:3001/sessions",
+          "protocol": "http",
+          "host": [
+            "localhost:3001"
+          ],
+          "path": [
+            "sessions"
+          ],
+          "query": [],
+          "variable": []
+        },
+        "body": {
+          "mode": "raw",
           "options": {
             "raw": {
               "language": "json"
@@ -48,26 +109,20 @@
         "auth": null,
         "description": "",
         "url": {
-          "raw": "http://localhost:3001/documents/3fb9a26f-9cff-4ee8-9d81-e819f648850e",
+          "raw": "http://localhost:3001/documents/:session-id",
           "protocol": "http",
           "host": [
             "localhost:3001"
           ],
           "path": [
             "documents",
-            "3fb9a26f-9cff-4ee8-9d81-e819f648850e"
+            ":session-id"
           ],
           "query": [],
-          "variable": []
-        },
-        "body": {
-          "mode": "urlencoded",
-          "urlencoded": [
+          "variable": [
             {
-              "key": "sessionId",
-              "value": "ec00d344-9f6a-46dc-8b48-a28c1118493c",
-              "disabled": false,
-              "type": "default"
+              "key": "session-id",
+              "value": "52b6b6c7-23ce-4f70-a39f-bddf1e119518"
             }
           ]
         }
@@ -104,14 +159,14 @@
         "auth": null,
         "description": "",
         "url": {
-          "raw": "http://localhost:3001/switch-conversation/3fb9a26f-9cff-4ee8-9d81-e819f648850e",
+          "raw": "http://localhost:3001/switch-conversation/09844e08-8147-4c4c-81d4-2f5ba00c6a22",
           "protocol": "http",
           "host": [
             "localhost:3001"
           ],
           "path": [
             "switch-conversation",
-            "3fb9a26f-9cff-4ee8-9d81-e819f648850e"
+            "09844e08-8147-4c4c-81d4-2f5ba00c6a22"
           ],
           "query": [],
           "variable": []
@@ -151,7 +206,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"modelName\": \"gemini\"\n}\n",
+          "raw": "{\n  \"modelName\": \"ollama\"\n}\n",
           "options": {
             "raw": {
               "language": "json"
@@ -186,7 +241,15 @@
             {
               "key": "files",
               "value": [
-                "C:\\Users\\shaun\\Downloads\\Test-Docs\\The Oracle at the Adelphi.txt"
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\an_introduction_to_parallel_programming_-_peter_s._pacheco.txt"
+              ],
+              "disabled": false,
+              "type": "default"
+            },
+            {
+              "key": "files",
+              "value": [
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\Explain various Cloud security risks.pdf"
               ],
               "disabled": false,
               "type": "default"
@@ -195,6 +258,14 @@
               "key": "files",
               "value": [
                 "C:\\Users\\shaun\\Downloads\\Test-Docs\\Letting Go.txt"
+              ],
+              "disabled": true,
+              "type": "default"
+            },
+            {
+              "key": "files",
+              "value": [
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\The Oracle at the Adelphi.txt"
               ],
               "disabled": true,
               "type": "default"
@@ -240,37 +311,6 @@
               "type": "default"
             }
           ]
-        }
-      }
-    },
-    {
-      "name": "Meta AI API",
-      "event": [],
-      "request": {
-        "method": "POST",
-        "header": [],
-        "auth": null,
-        "description": "",
-        "url": {
-          "raw": "http://localhost:5000/metaai",
-          "protocol": "http",
-          "host": [
-            "localhost:5000"
-          ],
-          "path": [
-            "metaai"
-          ],
-          "query": [],
-          "variable": []
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"prompt\": \"which is the tallest building, and also what do you think of elon musk\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
         }
       }
     }
