@@ -1,165 +1,142 @@
 // rag\src\vectorStore.ts
 import { ChromaClient, Collection } from 'chromadb';
 import { v4 as uuidv4 } from 'uuid';
-import { config } from './config';
-import { Logger } from './logger';
 import { Document } from './types';
+import { Logger } from './logger';
+import { Graph } from './graph';
+import { config } from './config';
+import { DocumentMetadata } from './documentLoader';
 
-export class VectorStore {
+export class VectorStoreService {
   private client: ChromaClient;
   private collection: Collection | null = null;
   private logger: Logger;
   private sessionId: string;
-  isInitialized(): boolean {
-    return this.collection != null;  // Return true if the collection is initialized
-  }
+  public graph: Graph;
 
   constructor() {
     this.client = new ChromaClient({ path: config.chromaDbPath });
     this.logger = Logger.getInstance();
     this.sessionId = uuidv4();
+    this.graph = new Graph();
   }
 
-  // Initialize vector store and create or load the collection for the current session
-  async initialize(documents: Document[], sessionId?: string): Promise<void> {
+  async initialize(sessionId?: string): Promise<void> {
     this.sessionId = sessionId || this.sessionId;
-    await this.logger.log(`Initializing vector store for session: ${this.sessionId}`);
-
+    const collectionName = `rag_collection_${this.sessionId}`;
+    
     try {
-      const collectionName = `rag_collection_${this.sessionId}`;
-      const existingCollection = await this.client.listCollections();
-      const collectionExists = existingCollection.some(col => col.name === collectionName);
-
-      if (collectionExists) {
-        await this.logger.log(`Loading existing collection: ${collectionName}`);
-        this.collection = await this.client.getCollection({ name: collectionName });
-      } else {
-        await this.logger.log(`Creating new collection: ${collectionName}`);
-        this.collection = await this.client.createCollection({ name: collectionName });
-      }
-
-      if (documents.length > 0) {
-        await this.addDocuments(documents);  // Add documents if provided
-      }
-
-      await this.logger.log('Vector store initialized successfully');
+      this.collection = await this.client.getOrCreateCollection({ 
+        name: collectionName,
+        metadata: { 
+          "hnsw:space": "cosine",
+          "hnsw:construction_ef": 100,
+          "hnsw:search_ef": 100
+        }
+      });
     } catch (error) {
       await this.logger.log('Error initializing vector store', error);
-      throw new Error(`Failed to initialize vector store: ${(error as Error).message}`);
+      throw error;
     }
   }
 
-  // Switch to a different session, which involves switching the collection
-  async switchSession(sessionId: string): Promise<void> {
-    this.sessionId = sessionId;
-    await this.logger.log(`Switching to session: ${sessionId}`);
-
-    const collectionName = `rag_collection_${this.sessionId}`;
-    const existingCollection = await this.client.listCollections();
-    const collectionExists = existingCollection.some(col => col.name === collectionName);
-
-    if (collectionExists) {
-      this.collection = await this.client.getCollection({ name: collectionName });
-      await this.logger.log(`Loaded collection for session: ${sessionId}`);
-    } else {
-      throw new Error(`Collection for session ${sessionId} does not exist`);
-    }
-  }
-  // Add documents and their embeddings to the vector store collection
   async addDocuments(documents: Document[]): Promise<void> {
-    if (!this.collection) {
-      throw new Error('Collection not initialized');
-    }
+    if (!this.collection) throw new Error('Collection not initialized');
 
-    try {
-      const ids = documents.map((_, index) => `doc_${index}`);
-      const embeddings = await Promise.all(documents.map(doc => this.getEmbedding(doc.pageContent)));  // Embed all documents
+    const ids = documents.map(doc => 
+      `${doc.metadata.documentId}_chunk${doc.metadata.chunkIndex}`
+    );
+    
+    const embeddings = await Promise.all(
+      documents.map(doc => this.getEmbedding(doc.pageContent))
+    );
 
-      const metadatas = documents.map(doc => ({ ...doc.metadata }));
+    const metadatas = documents.map(doc => ({
+      ...doc.metadata,
+      embedCreatedAt: new Date().toISOString()
+    }));
 
-      // Store document embeddings in the Chroma collection
-      await this.collection.add({
-        ids,
-        embeddings,
-        documents: documents.map(doc => doc.pageContent),
-        metadatas,
-      });
+    await this.collection.add({
+      ids,
+      embeddings,
+      documents: documents.map(doc => doc.pageContent),
+      metadatas
+    });
 
-      await this.logger.log('Documents added to the vector store');
-    } catch (error) {
-      await this.logger.log('Error adding documents to the vector store', error);
-      throw new Error(`Failed to add documents: ${(error as Error).message}`);
-    }
+    // Add document relationships to graph
+    documents.forEach(doc => {
+      const { documentId, source } = doc.metadata as DocumentMetadata;
+      this.graph.addNode(documentId, source);
+    });
   }
 
-  // Search for similar documents based on query embedding
-  async similaritySearch(query: string, k: number = 3): Promise<Document[]> {
-    await this.logger.log('Performing similarity search', { query, k });
+  async similaritySearch(query: string, k: number = 5): Promise<Document[]> {
+    if (!this.collection) throw new Error('Collection not initialized');
 
-    if (!this.collection) {
-      throw new Error('Collection not initialized');
-    }
+    const queryEmbedding = await this.getEmbedding(query);
+    
+    // Get more results initially for better coverage
+    const results = await this.collection.query({
+      queryEmbeddings: [queryEmbedding],
+      nResults: k * 2,
+      where: {}, // Query across all documents in collection
+    });
 
-    try {
-      const queryEmbedding = await this.getEmbedding(query);  // Generate embedding for the query
+    if (!results.documents?.[0]) return [];
 
-      const results = await this.collection.query({
-        queryEmbeddings: [queryEmbedding],
-        nResults: k,  // Retrieve top k relevant results from all documents
-      });
+    const documents = results.documents[0];
+    const metadatas = results.metadatas[0];
+    const distances = results.distances?.[0] ?? [];
 
-      await this.logger.log('Similarity search completed', { resultCount: results.documents?.[0]?.length || 0 });
-
-      if (!results.documents || !results.documents[0] || results.documents[0].length === 0) {
-        await this.logger.log('No results found in similarity search');
-        return [];
+    // Group results by document ID and combine relevant chunks
+    const documentGroups = new Map<string, Document[]>();
+    
+    documents.forEach((content, index) => {
+      const metadata = metadatas[index] as unknown as DocumentMetadata;
+      const { documentId } = metadata;
+      
+      if (!documentGroups.has(documentId)) {
+        documentGroups.set(documentId, []);
       }
-
-      // Return top-ranked documents from all sources
-      const filteredDocs = results.documents[0].filter((doc): doc is string => doc !== null);
-      const scores = (results as any).scores ? (results as any).scores[0] : [];
-      const rankedResults = this.rerankResults(filteredDocs, scores);
-
-      return rankedResults.map((doc, index) => ({
-        pageContent: doc || '',
+      
+      documentGroups.get(documentId)?.push({
+        pageContent: content ?? '',
         metadata: {
-          source: String(results.metadatas?.[0]?.[index]?.source || ''),
-          file_name: String(results.metadatas?.[0]?.[index]?.file_name || ''),
-          file_path: String(results.metadatas?.[0]?.[index]?.file_path || ''),
-          ...results.metadatas?.[0]?.[index],
-        },
-      }));
-    } catch (error) {
-      await this.logger.log('Error in similarity search', error);
-      throw new Error(`Failed to perform similarity search: ${(error as Error).message}`);
-    }
+          ...metadata,
+          score: distances[index]
+        }
+      });
+    });
+
+    // Sort and select top documents based on average chunk scores
+    const topDocuments = Array.from(documentGroups.values())
+      .map(chunks => {
+        const avgScore = chunks.reduce((sum, doc) => sum + (doc.metadata.score || 0), 0) / chunks.length;
+        return {
+          chunks,
+          avgScore
+        };
+      })
+      .sort((a, b) => a.avgScore - b.avgScore)
+      .slice(0, k)
+      .flatMap(doc => doc.chunks);
+
+    // Call refineResults with only the topDocuments parameter
+    return this.graph.refineResults(topDocuments);
   }
 
-  // Get embedding from an external API
   private async getEmbedding(text: string): Promise<number[]> {
     try {
       const response = await fetch('http://localhost:5000/embed', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
       });
-
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-      const data = await response.json();
-      return data; // Return the embedding received from Flask API
+      
+      if (!response.ok) throw new Error('Embedding API failed');
+      return await response.json();
     } catch (error) {
-      console.error('Error fetching embeddings:', error);
       throw new Error('Failed to fetch embeddings');
     }
-  }
-
-  // Rerank the results based on their scores
-  private rerankResults(docs: string[], scores: number[]): string[] {
-    return docs.sort((a, b) => scores[docs.indexOf(b)] - scores[docs.indexOf(a)]);
   }
 }

@@ -6,16 +6,19 @@ from meta_ai_api import MetaAI
 app = Flask(__name__)
 ai = MetaAI()
 
-# Load the model (all-mpnet-base-v2)
-model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
+# Load the embedding model
+embedding_model = SentenceTransformer('sentence-transformers/gtr-t5-large')
 
-# Embed API
 @app.route('/embed', methods=['POST'])
 def embed():
     data = request.json
-    text = data['text']
-    embeddings = model.encode([text])[0].tolist()
-    return jsonify(embeddings)
+    text = data.get('text')
+    if not text:
+        return jsonify({"error": "Text is required"}), 400
+
+    # Generate embedding
+    embedding = embedding_model.encode(text).tolist()
+    return jsonify(embedding)
 
 # Meta AI API
 @app.route('/metaai', methods=['POST'])

@@ -33,10 +33,11 @@ export class DatabaseService {
   }
 
   // Method to reset or start a new session
-  startNewSession(): void {
+  startNewSession(): Promise<string> {
     this.sessionId = uuidv4();  // Generate a new session ID
     this.sessionIds.push(this.sessionId);
     this.logger.log(`New session started with sessionId: ${this.sessionId}`);
+    return Promise.resolve(this.sessionId);  // Return the new session ID
   }
 
   // Method to switch to an existing session

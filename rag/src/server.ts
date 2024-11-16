@@ -53,8 +53,8 @@ async function initializeRAGSystem(files: Express.Multer.File[]) {
     await ragSystem.databaseService.saveDocuments(documentMetadata);  // Save metadata under the same session ID
 
     // **Ensure VectorStore is initialized**
-    if (!ragSystem.vectorStore.isInitialized()) {
-      await ragSystem.initialize(documents);  // Initialize vector store with documents
+    if (!ragSystem.vectorStore.initialize()) {
+      await ragSystem.initialize();  // Initialize vector store
     } else {
       // Add documents to the vector store for similarity search
       await ragSystem.addDocumentsToVectorStore(documents);  // Avoid re-initializing vector store

@@ -4,38 +4,64 @@ import { Document } from 'langchain/document';
 import { Logger } from './logger';
 import { Express } from 'express';
 
-// Function to chunk document into smaller pieces (paragraphs, sentences, or pages)
-function chunkDocument(content: string, chunkSize: number = 200): string[] {
-  const chunks: string[] = [];
-  const words = content.split(/\s+/);
-  
-  for (let i = 0; i < words.length; i += chunkSize) {
-    chunks.push(words.slice(i, i + chunkSize).join(' '));
-  }
-  
-  return chunks;
+export interface DocumentMetadata {
+  source: string;
+  documentId: string;
+  chunkIndex: number;
+  totalChunks: number;
 }
 
-export async function loadDocuments(files: Express.Multer.File[]): Promise<Document[]> {
-  const logger = Logger.getInstance();
-  await logger.log('Loading documents from file uploads', { files: files.map(f => f.originalname) });
+export class DocumentLoader {
+  private logger: Logger;
 
-  const documents: Document[] = [];
+  constructor() {
+    this.logger = Logger.getInstance();
+  }
 
-  for (const file of files) {
-    if (!file.path) {
-      throw new Error(`File path is undefined for file: ${file.originalname}`);
+  // Function to chunk document with metadata
+  private chunkDocument(content: string, documentId: string, source: string, chunkSize: number = 200): Document[] {
+    const chunks: Document[] = [];
+    const words = content.split(/\s+/);
+    const totalChunks = Math.ceil(words.length / chunkSize);
+    
+    for (let i = 0; i < words.length; i += chunkSize) {
+      const chunkContent = words.slice(i, i + chunkSize).join(' ');
+      const metadata: DocumentMetadata = {
+        source,
+        documentId,
+        chunkIndex: Math.floor(i / chunkSize),
+        totalChunks
+      };
+      
+      chunks.push(new Document({
+        pageContent: chunkContent,
+        metadata
+      }));
+    }
+    
+    return chunks;
+  }
+
+  async loadDocuments(files: Express.Multer.File[]): Promise<Document[]> {
+    await this.logger.log('Loading documents from file uploads', { files: files.map(f => f.originalname) });
+
+    const documents: Document[] = [];
+
+    for (const file of files) {
+      if (!file.path) {
+        throw new Error(`File path is undefined for file: ${file.originalname}`);
+      }
+
+      const content = await fs.readFile(file.path, 'utf-8');
+      const documentId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const chunks = this.chunkDocument(content, documentId, file.originalname);
+      documents.push(...chunks);
     }
 
-    const content = await fs.readFile(file.path, 'utf-8');
-    const documentChunks = chunkDocument(content);
-    const docChunks = documentChunks.map((chunk, index) => new Document({
-      pageContent: chunk,
-      metadata: { source: file.originalname, path: file.path, chunk: index },
-    }));
-    documents.push(...docChunks);
+    await this.logger.log('Documents loaded and chunked successfully', { count: documents.length });
+    return documents;
   }
-
-  await logger.log('Documents loaded and chunked successfully', { count: documents.length });
-  return documents;
 }
+
+const documentLoader = new DocumentLoader();
+export const loadDocuments = documentLoader.loadDocuments.bind(documentLoader);

@@ -15,7 +15,7 @@ export class LLMService {
 
   constructor() {
     this.logger = Logger.getInstance();
-    this.currentModel = 'gemini'; // Default to Gemini
+    this.currentModel = 'ollama'; // Default to Gemini
     this.initializeModels(); // Initialize the models
   }
 
@@ -27,7 +27,7 @@ export class LLMService {
 
     this.ollama = new Ollama({
       baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
-      model: 'llama3.1',
+      model: 'llama3.2:1b',
     });
 
     this.gemini = new GoogleGenerativeAI(geminiApiKey);
