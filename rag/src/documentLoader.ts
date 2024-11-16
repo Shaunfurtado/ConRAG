@@ -20,28 +20,31 @@ export class DocumentLoader {
   }
 
   // Function to chunk document with metadata
-  private chunkDocument(content: string, documentId: string, source: string, chunkSize: number = 200): Document[] {
+  private chunkDocument(content: string, documentId: string, source: string, chunkSize: number = 400, overlap: number = 75): Document[] {
     const chunks: Document[] = [];
     const words = content.split(/\s+/);
-    const totalChunks = Math.ceil(words.length / chunkSize);
+    const totalChunks = Math.ceil((words.length - overlap) / (chunkSize - overlap));
 
-    for (let i = 0; i < words.length; i += chunkSize) {
-      const chunkContent = words.slice(i, i + chunkSize).join(' ');
-      const metadata: DocumentMetadata = {
-        source,
-        documentId,
-        chunkIndex: Math.floor(i / chunkSize),
-        totalChunks
-      };
+    for (let i = 0; i < words.length; i += chunkSize - overlap) {
+        const chunkContent = words.slice(i, i + chunkSize).join(' ');
+        const metadata: DocumentMetadata = {
+            source,
+            documentId,
+            chunkIndex: Math.floor(i / (chunkSize - overlap)),
+            totalChunks
+        };
 
-      chunks.push(new Document({
-        pageContent: chunkContent,
-        metadata
-      }));
+        chunks.push(new Document({
+            pageContent: chunkContent,
+            metadata
+        }));
+
+        // Stop if the remaining words are fewer than chunkSize
+        if (i + chunkSize >= words.length) break;
     }
 
     return chunks;
-  }
+}
 
   // Function to process individual files
   private async processFile(file: Express.Multer.File): Promise<Document[]> {

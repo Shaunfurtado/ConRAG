@@ -40,35 +40,35 @@ export class VectorStoreService {
     }
   }
 
-  async addDocuments(documents: Document[]): Promise<void> {
+  async addBatchToVectorStore(batch: Document[]): Promise<void> {
     if (!this.collection) throw new Error('Collection not initialized');
 
-    const ids = documents.map(doc => 
-      `${doc.metadata.documentId}_chunk${doc.metadata.chunkIndex}`
+    const ids = batch.map(doc => 
+        `${doc.metadata.documentId}_chunk${doc.metadata.chunkIndex}`
     );
     
     const embeddings = await Promise.all(
-      documents.map(doc => this.getEmbedding(doc.pageContent))
+        batch.map(doc => this.getEmbedding(doc.pageContent))
     );
 
-    const metadatas = documents.map(doc => ({
-      ...doc.metadata,
-      embedCreatedAt: new Date().toISOString()
+    const metadatas = batch.map(doc => ({
+        ...doc.metadata,
+        embedCreatedAt: new Date().toISOString()
     }));
 
     await this.collection.add({
-      ids,
-      embeddings,
-      documents: documents.map(doc => doc.pageContent),
-      metadatas
+        ids,
+        embeddings,
+        documents: batch.map(doc => doc.pageContent),
+        metadatas
     });
 
-    // Add document relationships to graph
-    documents.forEach(doc => {
-      const { documentId, source } = doc.metadata as DocumentMetadata;
-      this.graph.addNode(documentId, source);
+    // Add document relationships to the graph
+    batch.forEach(doc => {
+        const { documentId, source } = doc.metadata as DocumentMetadata;
+        this.graph.addNode(documentId, source);
     });
-  }
+}
 
   async similaritySearch(query: string, k: number = 5): Promise<Document[]> {
     if (!this.collection) throw new Error('Collection not initialized');

@@ -41,7 +41,7 @@ export class RAGSystem {
       const documents = await this.documentLoader.loadDocuments(files);
       
       // Add documents to vector store
-      await this.vectorStore.addDocuments(documents);
+      await this.vectorStore.addBatchToVectorStore(documents);
       
       // Save document metadata to database
       const documentMetadata = files.map(file => ({
@@ -178,16 +178,22 @@ A: ${exchange.answer}
 `).join('\n');
   }
 
-  async addDocumentsToVectorStore(documents: Document[]): Promise<void> {
-    await this.logger.log('Adding documents to vector store');
+  async addDocumentsToVectorStore(documents: Document[], batchSize: number = 50): Promise<void> {
+    await this.logger.log('Adding documents to vector store in batches');
     try {
-      await this.vectorStore.addDocuments(documents);
-      await this.logger.log('Documents added to vector store successfully');
+        // Split documents into batches
+        const totalDocuments = documents.length;
+        for (let i = 0; i < totalDocuments; i += batchSize) {
+            const batch = documents.slice(i, i + batchSize);
+            await this.vectorStore.addBatchToVectorStore(batch);
+            await this.logger.log(`Batch ${Math.floor(i / batchSize) + 1} added to vector store`);
+        }
+        await this.logger.log('All documents added to vector store successfully');
     } catch (error) {
-      await this.logger.log('Error adding documents to vector store', error);
-      throw new Error(`Failed to add documents to vector store: ${(error as Error).message}`);
+        await this.logger.log('Error adding documents to vector store', error);
+        throw new Error(`Failed to add documents to vector store: ${(error as Error).message}`);
     }
-  }
+}
 
   async startNewConversation(): Promise<void> {
     await this.logger.log('Starting new conversation');
