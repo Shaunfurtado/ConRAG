@@ -61,7 +61,9 @@ export class RAGSystem {
 
   async query(question: string): Promise<QueryResult> {
     await this.logger.log('Processing query', { question });
-
+  
+    // Ensure the vector store is targeting the correct session
+    await this.vectorStore.initialize(this.sessionId);
     try {
       // Generate query variations for better coverage
       const queryVariations = this.generateQueryVariations(question);
@@ -73,7 +75,7 @@ export class RAGSystem {
         docs.forEach(doc => relevantDocsSet.add(doc));
       }
       const relevantDocs = Array.from(relevantDocsSet);
-
+  
       // Get conversation history
       const history = await this.databaseService.getConversationHistory();
       
@@ -83,9 +85,11 @@ export class RAGSystem {
       // Create final prompt
       const prompt = this.createFinalPrompt(question, context, history);
       
-      // Get LLM response
-      const answer = await this.llmService.generateResponse(prompt);
-      
+      // Generate LLM response as a stream
+      let answer = '';
+      const response = await this.llmService.generateResponse(prompt);
+      answer += response;
+  
       // Save conversation
       await this.databaseService.saveConversation(question, answer);
       
@@ -100,6 +104,7 @@ export class RAGSystem {
       throw new Error(`Failed to process query: ${(error as Error).message}`);
     }
   }
+  
 
   private generateQueryVariations(question: string): string[] {
     return [
@@ -186,16 +191,15 @@ A: ${exchange.answer}
 
   async startNewConversation(): Promise<void> {
     await this.logger.log('Starting new conversation');
-    
     try {
-      this.sessionId = await this.databaseService.startNewSession();
-      await this.vectorStore.initialize(this.sessionId);
-      await this.logger.log('New conversation started', { sessionId: this.sessionId });
+        this.sessionId = await this.databaseService.startNewSession();
+        await this.vectorStore.initialize(this.sessionId);
+        await this.logger.log('New conversation started', { sessionId: this.sessionId });
     } catch (error) {
-      await this.logger.log('Error starting new conversation', error);
-      throw new Error('Failed to start new conversation');
+        await this.logger.log('Error starting new conversation', error);
+        throw new Error('Failed to start new conversation');
     }
-  }
+}
 
   async switchConversation(sessionId: string): Promise<void> {
     await this.logger.log('Switching conversation', { sessionId });

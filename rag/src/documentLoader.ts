@@ -1,5 +1,6 @@
 // rag\src\documentLoader.ts
 import fs from 'fs/promises';
+import pdfParse from 'pdf-parse';
 import { Document } from 'langchain/document';
 import { Logger } from './logger';
 import { Express } from 'express';
@@ -23,7 +24,7 @@ export class DocumentLoader {
     const chunks: Document[] = [];
     const words = content.split(/\s+/);
     const totalChunks = Math.ceil(words.length / chunkSize);
-    
+
     for (let i = 0; i < words.length; i += chunkSize) {
       const chunkContent = words.slice(i, i + chunkSize).join(' ');
       const metadata: DocumentMetadata = {
@@ -32,16 +33,43 @@ export class DocumentLoader {
         chunkIndex: Math.floor(i / chunkSize),
         totalChunks
       };
-      
+
       chunks.push(new Document({
         pageContent: chunkContent,
         metadata
       }));
     }
-    
+
     return chunks;
   }
 
+  // Function to process individual files
+  private async processFile(file: Express.Multer.File): Promise<Document[]> {
+    const { originalname, path, mimetype } = file;
+    const documentId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    let content: string;
+
+    await this.logger.log(`Processing file: ${originalname} (MIME type: ${mimetype})`);
+
+    if (mimetype === 'text/plain') {
+      // Handle plain text files
+      content = await fs.readFile(path, 'utf-8');
+    } else if (mimetype === 'application/pdf') {
+      // Handle PDF files
+      const fileBuffer = await fs.readFile(path);
+      const pdfData = await pdfParse(fileBuffer);
+      content = pdfData.text;
+    } else {
+      throw new Error(`Unsupported file type: ${mimetype} for file: ${originalname}`);
+    }
+
+    await this.logger.log(`File content successfully extracted: ${originalname}`);
+
+    // Chunk the document and return
+    return this.chunkDocument(content, documentId, originalname);
+  }
+
+  // Function to load and process all files
   async loadDocuments(files: Express.Multer.File[]): Promise<Document[]> {
     await this.logger.log('Loading documents from file uploads', { files: files.map(f => f.originalname) });
 
@@ -52,10 +80,13 @@ export class DocumentLoader {
         throw new Error(`File path is undefined for file: ${file.originalname}`);
       }
 
-      const content = await fs.readFile(file.path, 'utf-8');
-      const documentId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const chunks = this.chunkDocument(content, documentId, file.originalname);
-      documents.push(...chunks);
+      try {
+        const chunks = await this.processFile(file);
+        documents.push(...chunks);
+      } catch (error) {
+        await this.logger.log(`Error processing file: ${file.originalname}`, { error });
+        throw error; // Rethrow the error for upstream handling
+      }
     }
 
     await this.logger.log('Documents loaded and chunked successfully', { count: documents.length });

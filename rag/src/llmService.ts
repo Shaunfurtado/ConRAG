@@ -52,7 +52,11 @@ export class LLMService {
       response = (await result.response.text()).trim();
     } else if (this.currentModel === 'ollama') {
       await this.logger.log('Using Ollama API');
-      response = await this.ollama.call(prompt);
+      const stream = await this.ollama.stream(prompt);
+      response = '';
+      for await (const chunk of stream) {
+        response += chunk;
+      }
     } else if(this.currentModel === 'metaai') {
       await this.logger.log('Using Meta AI API');
       const metaAiResponse = await axios.post('http://localhost:5000/metaai', { prompt });

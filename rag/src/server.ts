@@ -21,49 +21,51 @@ app.use(express.json());
 
 let ragSystem: RAGSystem | null = null; // Initialize ragSystem as null
 
-async function initializeRAGSystem(files: Express.Multer.File[]) {
+async function initializeRAGSystem(files: Express.Multer.File[]): Promise<void> {
   const logger = Logger.getInstance();
   await logger.log('Starting RAG system initialization');
 
   try {
-    // Check if RAG system is already initialized
-    if (!ragSystem) {
-      // Initialize the RAG system only if it's not already initialized
-      ragSystem = new RAGSystem();
-      await ragSystem.databaseService.initialize();  // Ensure database is initialized
-    }
+      // Check if RAG system is already initialized
+      if (!ragSystem) {
+          // Initialize the RAG system only if it's not already initialized
+          ragSystem = new RAGSystem();
+          await ragSystem.databaseService.initialize(); // Ensure database is initialized
+      }
 
-    if (!files || files.length === 0) {
-      throw new Error('No files provided for initialization');
-    }
+      if (!files || files.length === 0) {
+          throw new Error('No files provided for initialization');
+      }
 
-    await logger.log('Loading uploaded documents');
-    
-    // Load documents from uploaded files
-    const documents = await loadDocuments(files);
+      await logger.log('File upload complete. Preparing to process files.');
 
-    // **Get the current session ID from the RAGSystem**
-    const sessionId = ragSystem.databaseService.getSessionId();  // Use the existing session ID
+      // Load documents from uploaded files
+      const documents = await loadDocuments(files); // This function should handle txt and pdf files
 
-    // Save document metadata to the database using the current session ID
-    const documentMetadata = files.map(file => ({
-      file_name: file.originalname,
-      file_path: file.path
-    }));
-    await ragSystem.databaseService.saveDocuments(documentMetadata);  // Save metadata under the same session ID
+      // Log after documents are loaded
+      await logger.log(`${documents.length} documents successfully loaded.`);
 
-    // **Ensure VectorStore is initialized**
-    if (!ragSystem.vectorStore.initialize()) {
-      await ragSystem.initialize();  // Initialize vector store
-    } else {
+      // **Get the current session ID from the RAGSystem**
+      const sessionId = ragSystem.databaseService.getSessionId();
+      await ragSystem.vectorStore.initialize(sessionId);
+
+      // Save document metadata to the database using the current session ID
+      const documentMetadata = files.map(file => ({
+          file_name: file.originalname,
+          file_path: file.path
+      }));
+      await ragSystem.databaseService.saveDocuments(documentMetadata); // Save metadata under the same session ID
+
+      await logger.log('Starting to add documents to the vector store.');
+
       // Add documents to the vector store for similarity search
-      await ragSystem.addDocumentsToVectorStore(documents);  // Avoid re-initializing vector store
-    }
+      await ragSystem.addDocumentsToVectorStore(documents);
 
-    await logger.log('RAG system initialized successfully');
+      await logger.log('Documents successfully added to the vector store.');
+      await logger.log('RAG system initialized successfully');
   } catch (error) {
-    await logger.log('Error initializing RAG system', error);
-    throw new Error(`Failed to initialize RAG system: ${(error as Error).message}`);
+      await logger.log('Error initializing RAG system', error);
+      throw new Error(`Failed to initialize RAG system: ${(error as Error).message}`);
   }
 }
 
@@ -153,7 +155,17 @@ app.post('/switch-conversation/:sessionId', async (req: Request, res: Response) 
   }
 });
 
-const upload = multer({ dest: 'data/uploads/' });
+const upload = multer({
+  dest: 'data/uploads/',
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB limit
+  fileFilter: (req, file, cb) => {
+      const allowedMimeTypes = ['text/plain', 'application/pdf'];
+      if (!allowedMimeTypes.includes(file.mimetype)) {
+          return cb(null, false);
+      }
+      cb(null, true);
+  }
+});
 
 app.post('/upload', upload.array('files'), async (req: Request, res: Response) => {
   const files = req.files as Express.Multer.File[];
