@@ -155,10 +155,10 @@ ${historyContext}
 Current Question: ${question}
 
 Instructions:
-1. Use only information from the provided context to answer the question
+1. Use only information from the provided question's context to answer the question
 2. If the context doesn't contain enough information, acknowledge the limitations
 3. Cite specific sources from the context when possible
-4. Maintain consistency with previous conversation history
+4. Maintain consistency with previous conversation history only if the information is relevant to the current question
 5. Provide a clear, well-structured response
 
 Answer:`;
