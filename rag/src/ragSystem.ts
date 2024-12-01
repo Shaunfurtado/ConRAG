@@ -39,10 +39,8 @@ export class RAGSystem {
     try {
       // Load and chunk documents
       const documents = await this.documentLoader.loadDocuments(files);
-      
       // Add documents to vector store
       await this.vectorStore.addBatchToVectorStore(documents);
-      
       // Save document metadata to database
       const documentMetadata = files.map(file => ({
         file_name: file.originalname,
@@ -66,13 +64,14 @@ export class RAGSystem {
     await this.vectorStore.initialize(this.sessionId);
     try {
       // Generate query variations for better coverage
-      const queryVariations = this.generateQueryVariations(question);
+      const queryVariations = await this.generateQueryVariations(question);
       
       // Get relevant documents for each query variation
       const relevantDocsSet = new Set<Document>();
-      for (const query of queryVariations) {
+      const variations = await queryVariations;
+      for (const query of variations) {
         const docs = await this.vectorStore.similaritySearch(query, 3);
-        docs.forEach(doc => relevantDocsSet.add(doc));
+        docs.forEach((doc: Document) => relevantDocsSet.add(doc));
       }
       const relevantDocs = Array.from(relevantDocsSet);
   
@@ -106,78 +105,116 @@ export class RAGSystem {
   }
   
 
-  private generateQueryVariations(question: string): string[] {
-    return [
+  private async generateQueryVariations(question: string): Promise<string[]> {
+    // Initial templates for query variations
+    const templates = [
       question,
       `key information about ${question}`,
-      `main points regarding ${question}`,
-      `explain ${question}`,
-      `details about ${question}`
+      `main points regarding ${question}`
+      // `explain ${question}`,
+      // `details about ${question}`
     ];
+  
+    // Filter out variations that are too similar to the original question
+    const variations = new Set<string>();
+    variations.add(question); // Always include the original question
+  
+    for (const template of templates) {
+      if (template.toLowerCase() !== question.toLowerCase()) {
+        variations.add(template);
+      }
+    }
+  
+    // Optionally, use semantic similarity to filter nonsensical queries
+    const validVariations: string[] = [];
+    for (const variation of variations) {
+      const isRelevant = await this.vectorStore.checkRelevance(question, variation); 
+      // Assume `checkRelevance` is a method that uses embeddings or LLM to evaluate semantic similarity
+      if (isRelevant) {
+        validVariations.push(variation);
+      }
+    }
+  
+    return validVariations.length > 0 ? validVariations : [question]; // Fallback to the original question if no valid variations
   }
 
   private generateContext(documents: Document[]): string {
-    // Sort documents by relevance score if available
-    const sortedDocs = documents.sort((a, b) => 
-      (b.metadata.score || 0) - (a.metadata.score || 0)
-    );
+  // Sort by relevance score (descending)
+  const sortedDocs = documents.sort((a, b) =>
+    (b.metadata.score || 0) - (a.metadata.score || 0)
+  );
 
-    // Build context with document metadata
-    return sortedDocs.map(doc => {
+  // Deduplicate documents by source
+  const uniqueDocs = new Map<string, Document>();
+  sortedDocs.forEach((doc) => {
+      const source = doc.metadata.source;
+      if (source && !uniqueDocs.has(source)) {
+        uniqueDocs.set(source, doc);
+      }
+    });
+
+  return Array.from(uniqueDocs.values())
+    .map((doc) => {
       const metadata = doc.metadata;
       return `
-Source: ${metadata.source}
-Document ID: ${metadata.documentId}
-Chunk: ${metadata.chunkIndex + 1} of ${metadata.totalChunks}
-Content:
-${doc.pageContent}
--------------------
-`;
-    }).join('\n');
-  }
+        Source: ${metadata.source}
+        Content:
+        ${doc.pageContent}
+        -------------------
+        `;
+    })
+    .join('\n');
+}
 
   private createFinalPrompt(
-    question: string, 
-    context: string, 
+    question: string,
+    context: string,
     history: { question: string; answer: string }[]
   ): string {
     const historyContext = this.formatConversationHistory(history);
-    
+  
     return `
-Task: Answer the question comprehensively and accurately using the provided context and conversation history.
-
-Context:
-${context}
-
-Conversation History:
-${historyContext}
-
-Current Question: ${question}
-
-Instructions:
-1. Use only information from the provided question's context to answer the question
-2. If the context doesn't contain enough information, acknowledge the limitations
-3. Cite specific sources from the context when possible
-4. Maintain consistency with previous conversation history only if the information is relevant to the current question
-5. Provide a clear, well-structured response
-
-Answer:`;
+  You are a highly intelligent and precise AI assistant. Your job is to answer the user's question with high accuracy and relevance using the provided context. If the information isn't available in the context, explicitly mention it.
+  
+  Context:
+  ${context}
+  
+  Conversation History (last 3 exchanges):
+  ${historyContext || "No relevant previous conversation."}
+  
+  Current Question:
+  ${question}
+  
+  Guidelines for Your Answer:
+  1. Base your answer only on the provided context and question.
+  2. If the information isn't found in the context, state so instead of guessing.
+  3. Incorporate relevant conversation history **only if it directly aids the current question.**
+  4. Maintain conciseness and clarity in your responses.
+  5. Cite sources (e.g., "Source: {source}") wherever applicable.
+  
+  Answer:
+  `;
   }
-
+  
   private formatConversationHistory(
     history: { question: string; answer: string }[]
   ): string {
-    if (history.length === 0) return "No previous conversation.";
-
-    return history
-      .slice(-3) // Keep last 3 exchanges for context
-      .map((exchange, index) => `
-Exchange ${index + 1}:
-Q: ${exchange.question}
-A: ${exchange.answer}
-`).join('\n');
+    // Include only relevant recent exchanges
+    const relevantHistory = history.slice(-3); // Keep the last 3 exchanges for brevity.
+  
+    if (relevantHistory.length === 0) return "No previous conversation.";
+  
+    return relevantHistory
+      .map(
+        (exchange, index) => `
+  Conversation ${index + 1}:
+  Q: ${exchange.question}
+  A: ${exchange.answer}
+  `
+      )
+      .join('\n');
   }
-
+  
   async addDocumentsToVectorStore(documents: Document[], batchSize: number = 50): Promise<void> {
     await this.logger.log('Adding documents to vector store in batches');
     try {

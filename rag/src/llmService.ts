@@ -15,7 +15,7 @@ export class LLMService {
 
   constructor() {
     this.logger = Logger.getInstance();
-    this.currentModel = 'ollama'; // Default to Ollama
+    this.currentModel = 'gemini'; // Default to Ollama
     this.initializeModels(); // Initialize the models
   }
 
