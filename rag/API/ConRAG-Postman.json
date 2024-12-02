@@ -61,7 +61,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"question\": \"tell me about henry\"\n}\n",
+          "raw": "{\n  \"question\": \"who is the main chracter in story and give me the summary of all the charcters, and give the list of all the characters in the story and give a brief role/summary about each of them from the story\"\n}\n",
           "options": {
             "raw": {
               "language": "json"
@@ -122,7 +122,7 @@
           "variable": [
             {
               "key": "session-id",
-              "value": "52b6b6c7-23ce-4f70-a39f-bddf1e119518"
+              "value": "0fb04792-4874-488c-a27b-c18138ca9ab8"
             }
           ]
         }
@@ -159,17 +159,22 @@
         "auth": null,
         "description": "",
         "url": {
-          "raw": "http://localhost:3001/switch-conversation/09844e08-8147-4c4c-81d4-2f5ba00c6a22",
+          "raw": "http://localhost:3001/switch-conversation/:sessionId",
           "protocol": "http",
           "host": [
             "localhost:3001"
           ],
           "path": [
             "switch-conversation",
-            "09844e08-8147-4c4c-81d4-2f5ba00c6a22"
+            ":sessionId"
           ],
           "query": [],
-          "variable": []
+          "variable": [
+            {
+              "key": "sessionId",
+              "value": ""
+            }
+          ]
         },
         "body": {
           "mode": "urlencoded",
@@ -241,7 +246,7 @@
             {
               "key": "files",
               "value": [
-                "C:\\Users\\shaun\\Downloads\\Test-Docs\\an_introduction_to_parallel_programming_-_peter_s._pacheco.txt"
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\an_introduction_to_parallel_programming_-_peter_s._pacheco.pdf"
               ],
               "disabled": false,
               "type": "default"
@@ -251,7 +256,15 @@
               "value": [
                 "C:\\Users\\shaun\\Downloads\\Test-Docs\\Explain various Cloud security risks.pdf"
               ],
-              "disabled": false,
+              "disabled": true,
+              "type": "default"
+            },
+            {
+              "key": "files",
+              "value": [
+                "C:\\Users\\shaun\\Downloads\\Test-Docs\\an_introduction_to_parallel_programming_-_peter_s._pacheco.txt"
+              ],
+              "disabled": true,
               "type": "default"
             },
             {
@@ -311,6 +324,42 @@
               "type": "default"
             }
           ]
+        }
+      }
+    },
+    {
+      "name": "Get Conversation History",
+      "event": [],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": null,
+        "description": "",
+        "url": {
+          "raw": "http://localhost:3001/conversations/:sessionId",
+          "protocol": "http",
+          "host": [
+            "localhost:3001"
+          ],
+          "path": [
+            "conversations",
+            ":sessionId"
+          ],
+          "query": [],
+          "variable": [
+            {
+              "key": "sessionId",
+              "value": "4c7c7236-5636-4c2c-be4e-fafc45611ac2"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         }
       }
     }

@@ -211,6 +211,22 @@ app.post('/switch-llm-model', async (req: Request, res: Response) => {
   }
 });
 
+// Endpoint to retrieve all conversations for a given session ID
+app.get('/conversations/:sessionId', async (req: Request, res: Response) => {
+  const { sessionId } = req.params;
+
+  try {
+    // Use the method to fetch conversation history by session ID
+    const conversations = await databaseService.getConversationHistoryBySessionId(sessionId);
+
+    res.json({ conversations });
+  } catch (error) {
+    const logger = Logger.getInstance();
+    await logger.log('Error retrieving conversations', error);
+
+    res.status(500).json({ error: `Failed to retrieve conversations for session ID: ${sessionId}` });
+  }
+});
 
 // Start the Express server
 app.listen(port, () => {

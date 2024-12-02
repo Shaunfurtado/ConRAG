@@ -135,6 +135,24 @@ export class DatabaseService {
     }
   }
 
+  // Method to fetch all conversations for a specific session ID
+  async getConversationHistoryBySessionId(sessionId: string): Promise<ConversationTurn[]> {
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+
+    try {
+      const rows = await this.db.all(
+        'SELECT question, answer FROM conversations WHERE session_id = ? ORDER BY timestamp ASC',
+        [sessionId]
+      );
+      return rows as ConversationTurn[];
+    } catch (error) {
+      await this.logger.log('Error retrieving conversation history by session ID', error);
+      throw new Error(`Failed to retrieve conversation history for session ID: ${sessionId}`);
+    }
+  }
+
   // Save documents along with metadata and content
   async saveDocuments(documents: { file_name: string; file_path: string }[]): Promise<void> {
     const sessionId = this.getSessionId();  // Always use the same session ID
