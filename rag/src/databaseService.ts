@@ -46,10 +46,6 @@ export class DatabaseService {
     this.logger.log(`Switched to session: ${this.sessionId}`);
   }
 
-  getAllSessionIds(): string[] {
-    return this.sessionIds; 
-  }
-
   async initialize(): Promise<void> {
     try {
       this.db = await open({
@@ -88,6 +84,37 @@ export class DatabaseService {
       await this.logger.log('Error initializing database', error);
       throw new Error(`Failed to initialize database: ${(error as Error).message}`);
     }
+  }
+
+  // Method to fetch all unique session IDs from the database
+  public async fetchAllSessionIdsFromDatabase(): Promise<string[]> {
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+  
+    try {
+      const rows = await this.db.all(`
+        SELECT session_id
+        FROM (
+          SELECT session_id, MAX(timestamp) AS max_timestamp 
+          FROM conversations 
+          GROUP BY session_id
+        ) 
+        ORDER BY max_timestamp DESC
+      `);
+  
+      return rows.map(row => row.session_id); // Extract session IDs from the rows
+    } catch (error) {
+      await this.logger.log('Error fetching all session IDs from the database', error);
+      throw new Error(`Failed to fetch all session IDs: ${(error as Error).message}`);
+    }
+  }
+  
+  // Function to combine in-memory and database session IDs
+  async getAllSessionIds(): Promise<string[]> {
+    const dbSessionIds = await this.fetchAllSessionIdsFromDatabase();
+    const combinedSessionIds = new Set([...dbSessionIds, ...this.sessionIds]); // Combine and ensure uniqueness
+    return Array.from(combinedSessionIds);
   }
 
   // Save a conversation turn

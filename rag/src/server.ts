@@ -3,6 +3,7 @@ import express, { Request, Response } from 'express';
 import fs from 'fs';
 import { RAGSystem } from './ragSystem';
 import { loadDocuments } from './documentLoader';
+import { DatabaseService } from './databaseService';
 import { Logger } from './logger';
 import cors from 'cors';
 import multer from 'multer';
@@ -20,6 +21,11 @@ app.use(session({
 app.use(express.json());
 
 let ragSystem: RAGSystem | null = null; // Initialize ragSystem as null
+
+const databaseService = new DatabaseService();
+(async () => {
+  await databaseService.initialize();
+})();
 
 async function initializeRAGSystem(files: Express.Multer.File[]): Promise<void> {
   const logger = Logger.getInstance();
@@ -128,15 +134,12 @@ app.get('/documents/:sessionId', async (req: Request, res: Response) => {
   }
 });
 
+// Endpoint to retrieve all session IDs from the database
 app.get('/sessions', async (req: Request, res: Response) => {
   const logger = Logger.getInstance();
   
-  if (!ragSystem) {
-    return res.status(503).json({ error: 'RAG system is still initializing. Please try again later.' });
-  }
-
   try {
-    const sessionIds = ragSystem.databaseService.getAllSessionIds(); 
+    const sessionIds = await databaseService.getAllSessionIds(); // Await the async call
     res.json({ sessionIds });
   } catch (error) {
     await logger.log('Error retrieving session IDs', error);

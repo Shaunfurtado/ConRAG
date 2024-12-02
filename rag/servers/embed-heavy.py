@@ -4,7 +4,7 @@ from sentence_transformers import SentenceTransformer
 app = Flask(__name__)
 
 # Load the embedding model
-embedding_model = SentenceTransformer('sentence-transformers/gtr-t5-large')
+embedding_model = SentenceTransformer('sentence-transformers/gtr-t5-xl')
 
 @app.route('/embed', methods=['POST'])
 def embed():
