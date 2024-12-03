@@ -1,10 +1,12 @@
+# rag\servers\embed-heavy.py
+ 
 from flask import Flask, request, jsonify
 from sentence_transformers import SentenceTransformer
 
 app = Flask(__name__)
 
 # Load the embedding model
-embedding_model = SentenceTransformer('sentence-transformers/gtr-t5-xl')
+embedding_model = SentenceTransformer('sentence-transformers/gtr-t5-large')
 
 @app.route('/embed', methods=['POST'])
 def embed():

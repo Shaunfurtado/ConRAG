@@ -1,4 +1,3 @@
-// rag\src\vectorStore.ts
 import { ChromaClient, Collection } from 'chromadb';
 import { v4 as uuidv4 } from 'uuid';
 import { Document } from './types';
@@ -6,6 +5,7 @@ import { Logger } from './logger';
 import { Graph } from './graph';
 import { config } from './config';
 import { DocumentMetadata } from './documentLoader';
+import { BM25Retriever } from '@langchain/community/retrievers/bm25';
 
 export class VectorStoreService {
   private client: ChromaClient;
@@ -13,6 +13,7 @@ export class VectorStoreService {
   private logger: Logger;
   private sessionId: string;
   public graph: Graph;
+  private bm25Retriever: BM25Retriever | null = null;
 
   constructor() {
     this.client = new ChromaClient({ path: config.chromaDbPath });
@@ -34,6 +35,11 @@ export class VectorStoreService {
           "hnsw:search_ef": 100
         }
       });
+
+      // Initialize BM25 retriever with documents from the current collection
+      const documents = await this.getAllDocuments();
+      this.bm25Retriever = BM25Retriever.fromDocuments(documents, { k: 10 });
+
     } catch (error) {
       await this.logger.log('Error initializing vector store', error);
       throw error;
@@ -68,84 +74,73 @@ export class VectorStoreService {
         const { documentId, source } = doc.metadata as DocumentMetadata;
         this.graph.addNode(documentId, source);
     });
-}
 
-async similaritySearch(query: string, k: number = 5): Promise<Document[]> {
-  if (!this.collection) throw new Error('Collection not initialized');
+    // Update BM25 retriever
+    this.bm25Retriever = BM25Retriever.fromDocuments(batch, { k: 10 });
+  }
 
-  const queryEmbedding = await this.getEmbedding(query);
-  
-  // Get more results initially for better coverage
-  const results = await this.collection.query({
-    queryEmbeddings: [queryEmbedding],
-    nResults: k * 2,
-    where: {}, // Query across all documents in collection
-  });
+  async hybridSearch(query: string, k: number = 5): Promise<Document[]> {
+    if (!this.collection) throw new Error('Collection not initialized');
 
-  if (!results.documents?.[0]) return [];
-
-  const documents = results.documents[0];
-  const metadatas = results.metadatas[0];
-  const distances = results.distances?.[0] ?? [];
-
-  // Group results by document ID and combine relevant chunks
-  const documentGroups = new Map<string, Document[]>();
-  
-  documents.forEach((content, index) => {
-    const metadata = metadatas[index] as unknown as DocumentMetadata;
-    const { documentId } = metadata;
-    
-    if (!documentGroups.has(documentId)) {
-      documentGroups.set(documentId, []);
-    }
-    
-    documentGroups.get(documentId)?.push({
-      pageContent: content ?? '',
-      metadata: {
-        ...metadata,
-        score: distances[index]
-      }
+    // Step 1: Vector similarity search
+    const queryEmbedding = await this.getEmbedding(query);
+    const vectorResults = await this.collection.query({
+      queryEmbeddings: [queryEmbedding],
+      nResults: k * 2,
+      where: {}, // Query across all documents in collection
     });
-  });
 
-  // Sort and select top documents based on average chunk scores
-  const topDocuments = Array.from(documentGroups.values())
-    .map(chunks => {
-      const avgScore = chunks.reduce((sum, doc) => sum + (doc.metadata.score || 0), 0) / chunks.length;
-      return {
-        chunks,
-        avgScore
-      };
-    })
-    .sort((a, b) => a.avgScore - b.avgScore)
-    .slice(0, k)
-    .flatMap(doc => doc.chunks);
+    if (!vectorResults.documents?.[0]) return [];
 
-  // Check relevance and refine results
-  const relevantDocuments = topDocuments.filter(doc => {
-      const isRelevant = this.checkRelevance(query, doc.pageContent);
-      return isRelevant;
-  });
+    const vectorDocs = vectorResults.documents[0].map((content, index) => ({
+      pageContent: content ?? '',
+      metadata: vectorResults.metadatas[0][index]
+    }));
 
-  return this.graph.refineResults(relevantDocuments);
-}
+    // Step 2: BM25 reranking
+    const rerankedDocs = this.bm25Retriever
+      ? await this.bm25Retriever.invoke(query)
+      : vectorDocs;
 
-// Add the checkRelevance method in the VectorStoreService
-public checkRelevance(query: string, documentContent: string): boolean {
-  const queryTokens = query.toLowerCase().split(/\W+/);
-  const docTokens = documentContent.toLowerCase().split(/\W+/);
+    // Step 3: Combine results with Graph-based refinement
+    const validDocs = rerankedDocs.slice(0, k).filter(doc => doc.metadata !== null) as Document[];
+    const refinedResults = this.graph.refineResults(validDocs);
+    return refinedResults;
+  }
 
-  const querySet = new Set(queryTokens);
-  const docSet = new Set(docTokens);
+  private async getAllDocuments(): Promise<Document[]> {
+    if (!this.collection) throw new Error('Collection not initialized');
+  
+    try {
+      // Fetch all documents from the current active collection
+      const allDocs = await this.collection.get();
+      
+      // Map the retrieved documents and metadata into the expected Document structure
+      return (allDocs.documents || []).map((doc: string | null, index: number) => ({
+        pageContent: doc ?? '',
+        metadata: allDocs.metadatas && allDocs.metadatas[index] ? allDocs.metadatas[index] : {}
+      }));
+    } catch (error) {
+      this.logger.log('Error fetching all documents from the collection', error);
+      return [];
+    }
+  }
+  
 
-  const commonTokens = Array.from(querySet).filter(token => docSet.has(token));
-  const relevanceThreshold = 0.2; // Adjust this value as needed
+  public checkRelevance(query: string, documentContent: string): boolean {
+    const queryTokens = query.toLowerCase().split(/\W+/);
+    const docTokens = documentContent.toLowerCase().split(/\W+/);
+  
+    const querySet = new Set(queryTokens);
+    const docSet = new Set(docTokens);
+  
+    const commonTokens = Array.from(querySet).filter(token => docSet.has(token));
+    const relevanceThreshold = 0.2; // Adjust this value as needed
+  
+    return commonTokens.length / queryTokens.length >= relevanceThreshold;
+  }
 
-  return commonTokens.length / queryTokens.length >= relevanceThreshold;
-}
-
-
-  private async getEmbedding(text: string): Promise<number[]> {
+  public async getEmbedding(text: string): Promise<number[]> {
     try {
       const response = await fetch('http://localhost:5000/embed', {
         method: 'POST',

@@ -1,4 +1,4 @@
-// ragSystem.ts
+// rag\src\ragSystem.ts
 
 import { DocumentLoader } from './documentLoader';
 import { VectorStoreService } from './vectorStore';
@@ -70,7 +70,7 @@ export class RAGSystem {
       const relevantDocsSet = new Set<Document>();
       const variations = await queryVariations;
       for (const query of variations) {
-        const docs = await this.vectorStore.similaritySearch(query, 3);
+        const docs = await this.vectorStore.hybridSearch(query, 3);
         docs.forEach((doc: Document) => relevantDocsSet.add(doc));
       }
       const relevantDocs = Array.from(relevantDocsSet);
@@ -222,8 +222,36 @@ export class RAGSystem {
         const totalDocuments = documents.length;
         for (let i = 0; i < totalDocuments; i += batchSize) {
             const batch = documents.slice(i, i + batchSize);
-            await this.vectorStore.addBatchToVectorStore(batch);
-            await this.logger.log(`Batch ${Math.floor(i / batchSize) + 1} added to vector store`);
+            
+            // Process batch in-memory before adding to vector store
+            const batchToAdd: Document[] = [];
+            
+            for (const doc of batch) {
+                try {
+                    // Attempt to get embedding for each document
+                    const embedding = await this.vectorStore.getEmbedding(doc.pageContent);
+                    
+                    // If embedding is successful, add to batch
+                    batchToAdd.push({
+                        ...doc,
+                        metadata: {
+                            ...doc.metadata,
+                            embedCreatedAt: new Date().toISOString()
+                        }
+                    });
+                } catch (embeddingError) {
+                    // Log individual document embedding failure but continue processing
+                    await this.logger.log(`Failed to embed document: ${doc.metadata.source}`, embeddingError);
+                }
+            }
+            
+            // Add successfully embedded batch to vector store
+            if (batchToAdd.length > 0) {
+                await this.vectorStore.addBatchToVectorStore(batchToAdd);
+                await this.logger.log(`Batch ${Math.floor(i / batchSize) + 1} added to vector store`, { 
+                    batchSize: batchToAdd.length 
+                });
+            }
         }
         await this.logger.log('All documents added to vector store successfully');
     } catch (error) {
