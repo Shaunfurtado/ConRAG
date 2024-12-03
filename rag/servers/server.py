@@ -48,20 +48,10 @@ def prompt_meta_ai():
     prompt = data.get('prompt', '')
     if not prompt:
         return jsonify({'error': 'Prompt is required'}), 400
-
-    def generate_response():
-        # Call Meta AI API with the given prompt and stream the response
-        response = ai.prompt(message=prompt, stream=True)
-
-        # For each streamed chunk, yield the data in the desired format
-        for r in response:
-            yield jsonify({
-                'response': r['message'],
-                'sources': r.get('sources', [])
-            })
-
-    # Return the Response object with the stream
-    return Response(generate_response(), content_type='application/json; charset=utf-8')
+    
+    # Call Meta AI API with the given prompt
+    response = ai.prompt(message=prompt)
+    return jsonify({'response': response['message'], 'sources': response.get('sources', [])})
 
 if __name__ == '__main__':
     torch.backends.cudnn.benchmark = True  # Enable auto-tuning for better GPU performance
