@@ -11,3 +11,4 @@ jinaai/jina-embeddings-v3
 BAAI/bge-reranker-v2-m3
 nomic-ai/nomic-embed-text-v1.5
 Alibaba-NLP/gte-Qwen2-1.5B-instruct
+Snowflake/snowflake-arctic-embed-l-v2.0

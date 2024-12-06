@@ -106,37 +106,30 @@ export class RAGSystem {
   
 
   private async generateQueryVariations(question: string): Promise<string[]> {
-    // Initial templates for query variations
     const templates = [
-      question,
-      `key information about ${question}`,
-      `main points regarding ${question}`
-      // `explain ${question}`,
-      // `details about ${question}`
+        question,
+        `What is ${question}?`,
+        `Can you explain ${question}?`,
+        `Please provide details about ${question}`
     ];
-  
-    // Filter out variations that are too similar to the original question
+
     const variations = new Set<string>();
     variations.add(question); // Always include the original question
-  
-    for (const template of templates) {
-      if (template.toLowerCase() !== question.toLowerCase()) {
-        variations.add(template);
-      }
-    }
-  
+
+    // Use template variations as they are
+    templates.forEach(template => variations.add(template));
+
     // Optionally, use semantic similarity to filter nonsensical queries
     const validVariations: string[] = [];
     for (const variation of variations) {
-      const isRelevant = await this.vectorStore.checkRelevance(question, variation); 
-      // Assume `checkRelevance` is a method that uses embeddings or LLM to evaluate semantic similarity
-      if (isRelevant) {
-        validVariations.push(variation);
-      }
+        const isRelevant = await this.vectorStore.checkRelevance(question, variation); 
+        if (isRelevant) {
+            validVariations.push(variation);
+        }
     }
-  
+
     return validVariations.length > 0 ? validVariations : [question]; // Fallback to the original question if no valid variations
-  }
+}
 
   private generateContext(documents: Document[]): string {
   // Sort by relevance score (descending)
@@ -172,26 +165,26 @@ export class RAGSystem {
     history: { question: string; answer: string }[]
   ): string {
     const historyContext = this.formatConversationHistory(history);
-  
+
     return `
-  You are a highly intelligent and precise AI assistant. Your job is to answer the user's question with high accuracy and relevance using the provided context. If the information isn't available in the context, explicitly mention it.
-  
+  You are a highly intelligent and precise AI assistant. Your job is to answer the user's question with high accuracy and relevance using the provided context, as well as leveraging your own knowledge to enhance the answer. If the information isn't available in the context, explicitly mention it.
+
   Context:
   ${context}
-  
+
   Conversation History (last 3 exchanges):
   ${historyContext || "No relevant previous conversation."}
-  
+
   Current Question:
   ${question}
-  
+
   Guidelines for Your Answer:
-  1. Base your answer only on the provided context and question.
-  2. If the information isn't found in the context, state so instead of guessing.
+  1. Use the provided context and your own knowledge to formulate the most accurate and comprehensive response.
+  2. If the information isn't found in the context or your own knowledge, state so explicitly instead of guessing.
   3. Incorporate relevant conversation history **only if it directly aids the current question.**
   4. Maintain conciseness and clarity in your responses.
   5. Cite sources (e.g., "Source: {source}") wherever applicable.
-  
+
   Answer:
   `;
   }
