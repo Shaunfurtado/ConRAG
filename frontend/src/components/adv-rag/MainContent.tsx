@@ -96,10 +96,7 @@ const MainContent: React.FC<MainContentProps> = ({
         </div>
       )}
     </div>
-    <div className="bg-gray-800 p-4 h-24 overflow-y-auto shadow-inner">
-      <h3 className="text-sm font-semibold text-gray-400 mb-2">Context</h3>
-      <p className="text-sm">Relevant parts of the conversation history would be displayed here...</p>
-    </div>
+   
     <div className="bg-gray-800 p-4 flex items-center shadow-lg">
       <Button variant="outline" size="icon" className={`mr-2`} onClick={handleToggleRecording}>
         {isRecording ? <CircleStop className={`h-4 w-4 text-red-500 animate-pulse`} /> : <Mic className={`h-4 w-4 text-green-500`} />}

@@ -4,10 +4,10 @@ import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "@/components/adv-rag/Sidebar";
 import MainContent from "@/components/adv-rag/MainContent";
 import RightSidebar from "@/components/adv-rag/RightSideBar";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
 interface Message {
