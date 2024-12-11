@@ -47,11 +47,18 @@ type Message = {
   sender: "user" | "ai";
 };
 
+type ChatHistory = {
+  id: string;
+  title: string;
+};
+
 export function AdvancedRagAssistant() {
   const [activeTab, setActiveTab] = useState("chat");
   const [activeProfile, setActiveProfile] = useState("General");
   const [isFileUploadOpen, setIsFileUploadOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [chatHistories, setChatHistories] = useState<ChatHistory[]>([]);
+  const [selectedChat, setSelectedChat] = useState<string | null>(null);
 
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -66,8 +73,22 @@ export function AdvancedRagAssistant() {
   ]);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    // Fetch chat histories from the backend
+    const fetchChatHistories = async () => {
+      try {
+        const response = await fetch("http://localhost:3001/conversations");
+        const data = await response.json();
+        setChatHistories(data.conversations);
+      } catch (error) {
+        console.error("Error fetching chat histories:", error);
+      }
+    };
+
+    fetchChatHistories();
+  }, []);
+
   const handleSendMessage = async () => {
-    console.log("Send button clicked");
     if (inputText.trim()) {
       const userMessage: Message = {
         id: Date.now().toString(),
@@ -157,6 +178,29 @@ export function AdvancedRagAssistant() {
     };
   }, []);
 
+  const handleNewChat = async () => {
+    // Create a new chat in the backend
+    try {
+      const response = await fetch("http://localhost:3001/new-conversation", {
+        method: "POST",
+      });
+      const data = await response.json();
+      setChatHistories((prevHistories) => [
+        ...prevHistories,
+        { id: data.id, title: `Chat ${data.id}` },
+      ]);
+      setSelectedChat(data.id);
+    } catch (error) {
+      console.error("Error creating new chat:", error);
+    }
+  };
+
+  const handleSelectChat = (chatId: string) => {
+    setSelectedChat(chatId);
+    // Fetch messages for the selected chat from the backend
+    // ...
+  };
+
   return (
     <div className="flex h-screen bg-gray-900 text-gray-100">
       {/* Left Sidebar */}
@@ -172,17 +216,23 @@ export function AdvancedRagAssistant() {
           <h3 className="mb-2 text-sm font-semibold text-gray-400">
             Chat History
           </h3>
-          <button className="p-1 hover:bg-gray-700 rounded flex flex-row space-x-2 border border-b-2">
+          <button
+            className="p-1 hover:bg-gray-700 rounded flex flex-row space-x-2 border border-b-2"
+            onClick={handleNewChat}
+          >
             <h3>New Chat</h3>
             <FaPlus size={18} className="text-gray-400 mt-1" />{" "}
           </button>
           <ul className="space-y-2">
-            {["Chat 1", "Chat 2", "Chat 3", "Chat 4"].map((chat) => (
+            {chatHistories.map((chat) => (
               <li
-                key={chat}
-                className="px-2 py-1 rounded hover:bg-gray-700 cursor-pointer"
+                key={chat.id}
+                className={`px-2 py-1 rounded cursor-pointer ${
+                  selectedChat === chat.id ? "bg-blue-600" : "hover:bg-gray-700"
+                }`}
+                onClick={() => handleSelectChat(chat.id)}
               >
-                {chat}
+                {chat.title}
               </li>
             ))}
           </ul>
@@ -225,7 +275,7 @@ export function AdvancedRagAssistant() {
         </header>
 
         {/* Chat/Avatar Area */}
-        <div className="flex-1 overflow-y-scroll">
+        <div className="flex-1 overflow-hidden">
           {activeTab === "chat" ? (
             <ScrollArea className="flex-1 p-4 overflow-y-auto">
               {messages.map((message) => (
@@ -356,7 +406,10 @@ export function AdvancedRagAssistant() {
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
           />
-          <Button className="ml-2 bg-blue-500 hover:bg-blue-600 text-white" onClick={handleSendMessage}>
+          <Button
+            className="ml-2 bg-blue-500 hover:bg-blue-600 text-white"
+            onClick={handleSendMessage}
+          >
             <Send className="h-4 w-4" />
           </Button>
         </div>
