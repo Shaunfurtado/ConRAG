@@ -43,3 +43,5 @@ my_chroma_data/
 
 # Node modules directory
 node_modules/
+
+.env
