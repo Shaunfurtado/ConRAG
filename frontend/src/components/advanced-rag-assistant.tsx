@@ -67,6 +67,7 @@ export function AdvancedRagAssistant() {
   const [loading, setLoading] = useState(false);
 
   const handleSendMessage = async () => {
+    console.log("Send button clicked");
     if (inputText.trim()) {
       const userMessage: Message = {
         id: Date.now().toString(),
@@ -159,7 +160,7 @@ export function AdvancedRagAssistant() {
   return (
     <div className="flex h-screen bg-gray-900 text-gray-100">
       {/* Left Sidebar */}
-      <div className="w-64 bg-gray-800 p-4 flex flex-col">
+      <div className="w-64 bg-gray-800 p-4 flex flex-col shadow-lg">
         <div className="mb-8">
           <img
             src="/placeholder.svg?height=40&width=40"
@@ -209,23 +210,24 @@ export function AdvancedRagAssistant() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-y-auto h-full">
         {/* Header */}
-        <header className="bg-gray-800 p-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold">AI Assistant</h1>
+        <header className="bg-gray-800 p-4 flex items-center justify-between header shadow-lg">
+          <h2 className="text-xl font-bold text-white">AI Assistant</h2>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-64">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="chat">Chat</TabsTrigger>
               <TabsTrigger value="avatar">Avatar</TabsTrigger>
             </TabsList>
           </Tabs>
-          <div className="w-24"></div> {/* Spacer for alignment */}
+          {/* Spacer for alignment */}
+          <div className="ml-4"></div>
         </header>
 
         {/* Chat/Avatar Area */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-scroll">
           {activeTab === "chat" ? (
-            <ScrollArea className="flex-1 p-4">
+            <ScrollArea className="flex-1 p-4 overflow-y-auto">
               {messages.map((message) => (
                 <div
                   key={message.id}
@@ -253,7 +255,7 @@ export function AdvancedRagAssistant() {
                       </AvatarFallback>
                     </Avatar>
                     <div
-                      className={`mx-2 p-3 rounded-lg ${
+                      className={`mx-2 p-3 rounded-lg shadow-md ${
                         message.sender === "user"
                           ? "bg-blue-500 text-white"
                           : "bg-white dark:bg-gray-800 text-gray-800 dark:text-white"
@@ -317,7 +319,7 @@ export function AdvancedRagAssistant() {
         </div>
 
         {/* Context Window */}
-        <div className="bg-gray-800 p-4 h-24 overflow-y-auto">
+        <div className="bg-gray-800 p-4 h-24 overflow-y-auto shadow-inner">
           <h3 className="text-sm font-semibold text-gray-400 mb-2">Context</h3>
           <p className="text-sm">
             Relevant parts of the conversation history would be displayed
@@ -326,7 +328,7 @@ export function AdvancedRagAssistant() {
         </div>
 
         {/* Message Input */}
-        <div className="bg-gray-800 p-4 flex items-center">
+        <div className="bg-gray-800 p-4 flex items-center shadow-lg">
           <Button
             variant="outline"
             size="icon"
@@ -334,9 +336,9 @@ export function AdvancedRagAssistant() {
             onClick={handleToggleRecording}
           >
             {isRecording ? (
-              <CircleStop className={`h-4 w-4`} color="#ff0000" />
+              <CircleStop className={`h-4 w-4 text-red-500 animate-pulse`} />
             ) : (
-              <Mic className={`h-4 w-4 `} />
+              <Mic className={`h-4 w-4 text-green-500`} />
             )}
           </Button>
           <Button
@@ -345,23 +347,23 @@ export function AdvancedRagAssistant() {
             className="mr-2"
             onClick={() => setIsFileUploadOpen(true)}
           >
-            <PaperclipIcon className="h-4 w-4" />
+            <PaperclipIcon className="h-4 w-4 text-yellow-500" />
           </Button>
           <Input
-            className="flex-1 bg-gray-700"
+            className="flex-1 bg-gray-700 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
             placeholder={inputPlaceholder}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
           />
-          <Button className="ml-2" onClick={handleSendMessage}>
+          <Button className="ml-2 bg-blue-500 hover:bg-blue-600 text-white" onClick={handleSendMessage}>
             <Send className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
       {/* Right Sidebar */}
-      <div className="w-64 bg-gray-800 p-4 flex flex-col">
+      <div className="w-64 bg-gray-800 p-4 flex flex-col shadow-lg">
         <div className="mb-8">
           <h3 className="mb-2 text-sm font-semibold text-gray-400">Sources</h3>
           <ul className="space-y-2">
@@ -377,7 +379,7 @@ export function AdvancedRagAssistant() {
         </div>
         <Button
           variant="outline"
-          className="mb-8"
+          className="mb-8 bg-gray-700 hover:bg-gray-600 text-white"
           onClick={() => setIsSettingsOpen(true)}
         >
           <Settings className="mr-2 h-4 w-4" /> Settings
@@ -394,7 +396,7 @@ export function AdvancedRagAssistant() {
       </div>
 
       {/* Floating Action Button */}
-      <Button className="fixed bottom-4 right-4 rounded-full" size="icon">
+      <Button className="fixed bottom-4 right-4 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg">
         <Plus className="h-4 w-4" />
       </Button>
 
