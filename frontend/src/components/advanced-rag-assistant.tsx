@@ -47,11 +47,18 @@ type Message = {
   sender: "user" | "ai";
 };
 
+type ChatHistory = {
+  id: string;
+  title: string;
+};
+
 export function AdvancedRagAssistant() {
   const [activeTab, setActiveTab] = useState("chat");
   const [activeProfile, setActiveProfile] = useState("General");
   const [isFileUploadOpen, setIsFileUploadOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [chatHistories, setChatHistories] = useState<ChatHistory[]>([]);
+  const [selectedChat, setSelectedChat] = useState<string | null>(null);
 
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -65,6 +72,29 @@ export function AdvancedRagAssistant() {
     { id: "1", content: "Hello! How can I assist you today?", sender: "ai" },
   ]);
   const [loading, setLoading] = useState(false);
+  type Document = {
+    file_name: string;
+    // Add other properties if needed
+  };
+  
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState(null);
+  const [files, setFiles] = useState<FileList | null>(null);
+
+  useEffect(() => {
+    // Fetch chat histories from the backend
+    const fetchChatHistories = async () => {
+      try {
+        const response = await fetch("http://localhost:3001/conversations");
+        const data = await response.json();
+        setChatHistories(data.conversations);
+      } catch (error) {
+        console.error("Error fetching chat histories:", error);
+      }
+    };
+
+    fetchChatHistories();
+  }, []);
 
   const handleSendMessage = async () => {
     if (inputText.trim()) {
@@ -156,10 +186,77 @@ export function AdvancedRagAssistant() {
     };
   }, []);
 
+  const handleNewChat = async () => {
+    // Create a new chat in the backend
+    try {
+      const response = await fetch("http://localhost:3001/new-conversation", {
+        method: "POST",
+      });
+      const data = await response.json();
+      setChatHistories((prevHistories) => [
+        ...prevHistories,
+        { id: data.id, title: `Chat ${data.id}` },
+      ]);
+      setSelectedChat(data.id);
+    } catch (error) {
+      console.error("Error creating new chat:", error);
+    }
+  };
+
+  const handleSelectChat = (chatId: string) => {
+    setSelectedChat(chatId);
+    // Fetch messages for the selected chat from the backend
+    // ...
+  };
+
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      if (!selectedSessionId) return;
+
+      try {
+        const response = await fetch(`http://localhost:3001/documents/${selectedSessionId}`);
+        const data = await response.json();
+        setDocuments(data.documents);
+      } catch (error) {
+        console.error('Error fetching documents:', error);
+      }
+    };
+
+    fetchDocuments();
+  }, [selectedSessionId]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setFiles(event.target.files);
+  };
+
+  const handleUpload = async () => {
+    if (!files) return;
+
+    const formData = new FormData();
+    Array.from(files).forEach(file => {
+      formData.append('files', file);
+    });
+
+    try {
+      const response = await fetch('http://localhost:3001/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+      console.log(data.message);
+
+         // Assuming the session ID is returned in the response
+         setSelectedSessionId(data.sessionId);
+        } catch (error) {
+          console.error('Error uploading files:', error);
+        }
+      };
+
   return (
     <div className="flex h-screen bg-gray-900 text-gray-100">
       {/* Left Sidebar */}
-      <div className="w-64 bg-gray-800 p-4 flex flex-col">
+      <div className="w-64 bg-gray-800 p-4 flex flex-col shadow-lg">
         <div className="mb-8">
           <img
             src="/placeholder.svg?height=40&width=40"
@@ -171,17 +268,32 @@ export function AdvancedRagAssistant() {
           <h3 className="mb-2 text-sm font-semibold text-gray-400">
             Chat History
           </h3>
-          <button className="p-1 hover:bg-gray-700 rounded flex flex-row space-x-2 border border-b-2">
+          <button
+            className="p-1 hover:bg-gray-700 rounded flex items-center space-x-2 border border-b-2"
+            onClick={handleNewChat}
+            aria-label="Create new chat"
+          >
             <h3>New Chat</h3>
-            <FaPlus size={18} className="text-gray-400 mt-1" />{" "}
+            <FaPlus size={18} className="text-gray-400 mt-1" />
           </button>
-          <ul className="space-y-2">
-            {["Chat 1", "Chat 2", "Chat 3", "Chat 4"].map((chat) => (
+          <ul className="space-y-2 mt-2">
+            {chatHistories.map((chat) => (
               <li
-                key={chat}
-                className="px-2 py-1 rounded hover:bg-gray-700 cursor-pointer"
+                key={chat.id}
+                className={`px-2 py-1 rounded cursor-pointer ${
+                  selectedChat === chat.id ? "bg-blue-600" : "hover:bg-gray-700"
+                }`}
+                onClick={() => handleSelectChat(chat.id)}
+                role="button"
+                aria-pressed={selectedChat === chat.id}
+                tabIndex={0}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    handleSelectChat(chat.id);
+                  }
+                }}
               >
-                {chat}
+                {chat.title}
               </li>
             ))}
           </ul>
@@ -209,23 +321,24 @@ export function AdvancedRagAssistant() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-y-auto h-full">
         {/* Header */}
-        <header className="bg-gray-800 p-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold">AI Assistant</h1>
+        <header className="bg-gray-800 p-4 flex items-center justify-between header shadow-lg">
+          <h2 className="text-xl font-bold text-white">AI Assistant</h2>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-64">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="chat">Chat</TabsTrigger>
               <TabsTrigger value="avatar">Avatar</TabsTrigger>
             </TabsList>
           </Tabs>
-          <div className="w-24"></div> {/* Spacer for alignment */}
+          {/* Spacer for alignment */}
+          <div className="ml-4"></div>
         </header>
 
         {/* Chat/Avatar Area */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-scroll">
           {activeTab === "chat" ? (
-            <ScrollArea className="flex-1 p-4">
+            <ScrollArea className="flex-1 p-4 ">
               {messages.map((message) => (
                 <div
                   key={message.id}
@@ -253,7 +366,7 @@ export function AdvancedRagAssistant() {
                       </AvatarFallback>
                     </Avatar>
                     <div
-                      className={`mx-2 p-3 rounded-lg ${
+                      className={`mx-2 p-3 rounded-lg shadow-md ${
                         message.sender === "user"
                           ? "bg-blue-500 text-white"
                           : "bg-white dark:bg-gray-800 text-gray-800 dark:text-white"
@@ -316,17 +429,10 @@ export function AdvancedRagAssistant() {
           )}
         </div>
 
-        {/* Context Window */}
-        <div className="bg-gray-800 p-4 h-24 overflow-y-auto">
-          <h3 className="text-sm font-semibold text-gray-400 mb-2">Context</h3>
-          <p className="text-sm">
-            Relevant parts of the conversation history would be displayed
-            here...
-          </p>
-        </div>
+        
 
         {/* Message Input */}
-        <div className="bg-gray-800 p-4 flex items-center">
+        <div className="bg-gray-800 p-4 flex items-center shadow-lg">
           <Button
             variant="outline"
             size="icon"
@@ -334,9 +440,9 @@ export function AdvancedRagAssistant() {
             onClick={handleToggleRecording}
           >
             {isRecording ? (
-              <CircleStop className={`h-4 w-4`} color="#ff0000" />
+              <CircleStop className={`h-4 w-4 text-red-500 animate-pulse`} />
             ) : (
-              <Mic className={`h-4 w-4 `} />
+              <Mic className={`h-4 w-4 text-green-500`} />
             )}
           </Button>
           <Button
@@ -345,39 +451,42 @@ export function AdvancedRagAssistant() {
             className="mr-2"
             onClick={() => setIsFileUploadOpen(true)}
           >
-            <PaperclipIcon className="h-4 w-4" />
+            <PaperclipIcon className="h-4 w-4 text-yellow-500" />
           </Button>
           <Input
-            className="flex-1 bg-gray-700"
+            className="flex-1 bg-gray-700 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
             placeholder={inputPlaceholder}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
           />
-          <Button className="ml-2" onClick={handleSendMessage}>
+          <Button
+            className="ml-2 bg-blue-500 hover:bg-blue-600 text-white"
+            onClick={handleSendMessage}
+          >
             <Send className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
       {/* Right Sidebar */}
-      <div className="w-64 bg-gray-800 p-4 flex flex-col">
+      <div className="w-64 bg-gray-800 p-4 flex flex-col shadow-lg">
         <div className="mb-8">
           <h3 className="mb-2 text-sm font-semibold text-gray-400">Sources</h3>
           <ul className="space-y-2">
-            {["Doc1", "Doc2", "Doc3"].map((doc) => (
+            {documents.map((doc) => (
               <li
-                key={doc}
+                key={doc.files}
                 className="px-2 py-1 rounded hover:bg-gray-700 cursor-pointer"
               >
-                {doc}
+                {doc.files}
               </li>
             ))}
           </ul>
         </div>
         <Button
           variant="outline"
-          className="mb-8"
+          className="mb-8 bg-gray-700 hover:bg-gray-600 text-white"
           onClick={() => setIsSettingsOpen(true)}
         >
           <Settings className="mr-2 h-4 w-4" /> Settings
@@ -394,7 +503,7 @@ export function AdvancedRagAssistant() {
       </div>
 
       {/* Floating Action Button */}
-      <Button className="fixed bottom-4 right-4 rounded-full" size="icon">
+      <Button className="fixed bottom-4 right-4 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg">
         <Plus className="h-4 w-4" />
       </Button>
 

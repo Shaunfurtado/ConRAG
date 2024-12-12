@@ -1,0 +1,23 @@
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env*.local
+.env
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Log files
+chroma.log
+
+# Chroma data directory
+my_chroma_data/
+
+# Node modules directory
+node_modules/
