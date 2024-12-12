@@ -217,13 +217,14 @@ export function AdvancedRagAssistant() {
             Chat History
           </h3>
           <button
-            className="p-1 hover:bg-gray-700 rounded flex flex-row space-x-2 border border-b-2"
+            className="p-1 hover:bg-gray-700 rounded flex items-center space-x-2 border border-b-2"
             onClick={handleNewChat}
+            aria-label="Create new chat"
           >
             <h3>New Chat</h3>
-            <FaPlus size={18} className="text-gray-400 mt-1" />{" "}
+            <FaPlus size={18} className="text-gray-400 mt-1" />
           </button>
-          <ul className="space-y-2">
+          <ul className="space-y-2 mt-2">
             {chatHistories.map((chat) => (
               <li
                 key={chat.id}
@@ -231,6 +232,14 @@ export function AdvancedRagAssistant() {
                   selectedChat === chat.id ? "bg-blue-600" : "hover:bg-gray-700"
                 }`}
                 onClick={() => handleSelectChat(chat.id)}
+                role="button"
+                aria-pressed={selectedChat === chat.id}
+                tabIndex={0}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    handleSelectChat(chat.id);
+                  }
+                }}
               >
                 {chat.title}
               </li>
