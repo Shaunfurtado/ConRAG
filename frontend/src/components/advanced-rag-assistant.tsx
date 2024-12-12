@@ -72,6 +72,14 @@ export function AdvancedRagAssistant() {
     { id: "1", content: "Hello! How can I assist you today?", sender: "ai" },
   ]);
   const [loading, setLoading] = useState(false);
+  type Document = {
+    file_name: string;
+    // Add other properties if needed
+  };
+  
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState(null);
+  const [files, setFiles] = useState<FileList | null>(null);
 
   useEffect(() => {
     // Fetch chat histories from the backend
@@ -200,6 +208,50 @@ export function AdvancedRagAssistant() {
     // Fetch messages for the selected chat from the backend
     // ...
   };
+
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      if (!selectedSessionId) return;
+
+      try {
+        const response = await fetch(`http://localhost:3001/documents/${selectedSessionId}`);
+        const data = await response.json();
+        setDocuments(data.documents);
+      } catch (error) {
+        console.error('Error fetching documents:', error);
+      }
+    };
+
+    fetchDocuments();
+  }, [selectedSessionId]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setFiles(event.target.files);
+  };
+
+  const handleUpload = async () => {
+    if (!files) return;
+
+    const formData = new FormData();
+    Array.from(files).forEach(file => {
+      formData.append('files', file);
+    });
+
+    try {
+      const response = await fetch('http://localhost:3001/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+      console.log(data.message);
+
+         // Assuming the session ID is returned in the response
+         setSelectedSessionId(data.sessionId);
+        } catch (error) {
+          console.error('Error uploading files:', error);
+        }
+      };
 
   return (
     <div className="flex h-screen bg-gray-900 text-gray-100">
@@ -422,12 +474,12 @@ export function AdvancedRagAssistant() {
         <div className="mb-8">
           <h3 className="mb-2 text-sm font-semibold text-gray-400">Sources</h3>
           <ul className="space-y-2">
-            {["Doc1", "Doc2", "Doc3"].map((doc) => (
+            {documents.map((doc) => (
               <li
-                key={doc}
+                key={doc.files}
                 className="px-2 py-1 rounded hover:bg-gray-700 cursor-pointer"
               >
-                {doc}
+                {doc.files}
               </li>
             ))}
           </ul>
