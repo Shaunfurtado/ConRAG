@@ -251,7 +251,7 @@ const handleUpload = async () => {
 
     const data = await response.json();
 
-    if (data.success) {
+    if (data) {
       setSelectedSessionId(data.sessionId);
       alert("Files uploaded successfully!");
     } else {
