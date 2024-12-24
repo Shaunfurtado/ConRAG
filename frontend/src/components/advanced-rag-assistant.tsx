@@ -63,26 +63,19 @@ export function AdvancedRagAssistant() {
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef<any>(null);
-  const [inputText, setInputText] = useState(""); // Now using this as main input state
-  const [inputPlaceholder, setInputPlaceholder] = useState(
-    "Type your message..."
-  );
+  const [inputText, setInputText] = useState(""); // Main input state
+  const [inputPlaceholder, setInputPlaceholder] = useState("Type your message...");
 
   const [messages, setMessages] = useState<Message[]>([
     { id: "1", content: "Hello! How can I assist you today?", sender: "ai" },
   ]);
   const [loading, setLoading] = useState(false);
-  type Document = {
-    file_name: string;
-    // Add other properties if needed
-  };
+  type Document = { file_name: string };
   
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [selectedSessionId, setSelectedSessionId] = useState(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [files, setFiles] = useState<FileList | null>(null);
 
   useEffect(() => {
-    // Fetch chat histories from the backend
     const fetchChatHistories = async () => {
       try {
         const response = await fetch("http://localhost:3001/conversations");
@@ -110,9 +103,7 @@ export function AdvancedRagAssistant() {
       try {
         const response = await fetch("http://localhost:3001/query", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ question: userMessage.content }),
         });
 
@@ -186,73 +177,108 @@ export function AdvancedRagAssistant() {
     };
   }, []);
 
+  // Function to handle creating a new chat
   const handleNewChat = async () => {
-    // Create a new chat in the backend
+    setLoading(true); // Start loading state while fetching new chat
     try {
       const response = await fetch("http://localhost:3001/new-conversation", {
         method: "POST",
       });
       const data = await response.json();
+      // Add new chat to the chat histories and select the new chat
       setChatHistories((prevHistories) => [
         ...prevHistories,
         { id: data.id, title: `Chat ${data.id}` },
       ]);
-      setSelectedChat(data.id);
+      setSelectedChat(data.id); // Set the new chat as selected
+      setMessages([]); // Clear any previous messages
     } catch (error) {
       console.error("Error creating new chat:", error);
+    } finally {
+      setLoading(false); // Stop loading once the request is complete
     }
   };
 
-  const handleSelectChat = (chatId: string) => {
+  // Function to handle selecting an existing chat
+  const handleSelectChat = async (chatId: string) => {
     setSelectedChat(chatId);
-    // Fetch messages for the selected chat from the backend
-    // ...
+    try {
+      // Fetch messages for the selected chat from the backend
+      const response = await fetch(`http://localhost:3001/chat/${chatId}`);
+      const data = await response.json();
+      setMessages(data.messages); // Set messages of the selected chat
+    } catch (error) {
+      console.error("Error fetching chat messages:", error);
+    }
   };
 
-  useEffect(() => {
-    const fetchDocuments = async () => {
-      if (!selectedSessionId) return;
 
-      try {
-        const response = await fetch(`http://localhost:3001/documents/${selectedSessionId}`);
-        const data = await response.json();
-        setDocuments(data.documents);
-      } catch (error) {
-        console.error('Error fetching documents:', error);
-      }
-    };
+// Allowed file types: Images, PDFs, Text files
+const allowedTypes = [
+  "image/png", 
+  "image/jpeg", 
+  "application/pdf", 
+  "text/plain",  // .txt files
+  "text/markdown" // .md files
+];
 
-    fetchDocuments();
-  }, [selectedSessionId]);
+// Handle file selection with validation
+const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const selectedFiles = event.target.files;
+  if (selectedFiles) {
+    // Validate that all selected files are of an allowed type
+    const isValidFile = Array.from(selectedFiles).every((file) =>
+      allowedTypes.includes(file.type)
+    );
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFiles(event.target.files);
-  };
+    if (isValidFile) {
+      setFiles(selectedFiles);
+    } else {
+      alert("One or more selected files are not supported. Please choose valid files.");
+    }
+  }
+};
 
-  const handleUpload = async () => {
-    if (!files) return;
+// Handle file upload
+const handleUpload = async () => {
+  if (!files) {
+    console.error("No files selected");
+    return;
+  }
 
-    const formData = new FormData();
-    Array.from(files).forEach(file => {
-      formData.append('files', file);
+  const formData = new FormData();
+  Array.from(files).forEach((file) => {
+    formData.append("files", file);
+  });
+
+  setLoading(true); // Show loading state
+
+  try {
+    const response = await fetch("http://localhost:3001/upload", {
+      method: "POST",
+      body: formData,
     });
 
-    try {
-      const response = await fetch('http://localhost:3001/upload', {
-        method: 'POST',
-        body: formData,
-      });
+    if (!response.ok) {
+      throw new Error("Failed to upload files");
+    }
 
-      const data = await response.json();
-      console.log(data.message);
+    const data = await response.json();
 
-         // Assuming the session ID is returned in the response
-         setSelectedSessionId(data.sessionId);
-        } catch (error) {
-          console.error('Error uploading files:', error);
-        }
-      };
-
+    if (data) {
+      setSelectedSessionId(data.sessionId);
+      alert("Files uploaded successfully!");
+    } else {
+      alert("Error during upload. Please try again.");
+    }
+  } catch (error) {
+    console.error("Error uploading files:", error);
+    alert("Error uploading files. Please try again later.");
+  } finally {
+    setLoading(false); // Hide loading state
+    setIsFileUploadOpen(false); // Close the modal or file upload dialog
+  }
+};
   return (
     <div className="flex h-screen bg-gray-900 text-gray-100">
       {/* Left Sidebar */}
@@ -265,39 +291,99 @@ export function AdvancedRagAssistant() {
           />
         </div>
         <div className="mb-8">
-          <h3 className="mb-2 text-sm font-semibold text-gray-400">
-            Chat History
-          </h3>
-          <button
-            className="p-1 hover:bg-gray-700 rounded flex items-center space-x-2 border border-b-2"
-            onClick={handleNewChat}
-            aria-label="Create new chat"
-          >
-            <h3>New Chat</h3>
-            <FaPlus size={18} className="text-gray-400 mt-1" />
-          </button>
-          <ul className="space-y-2 mt-2">
-            {chatHistories.map((chat) => (
-              <li
-                key={chat.id}
-                className={`px-2 py-1 rounded cursor-pointer ${
-                  selectedChat === chat.id ? "bg-blue-600" : "hover:bg-gray-700"
-                }`}
-                onClick={() => handleSelectChat(chat.id)}
-                role="button"
-                aria-pressed={selectedChat === chat.id}
-                tabIndex={0}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    handleSelectChat(chat.id);
-                  }
-                }}
-              >
-                {chat.title}
-              </li>
-            ))}
-          </ul>
+    {/* Chat History Section */}
+    <h3 className="mb-2 text-sm font-semibold text-gray-400">
+      Chat History
+    </h3>
+    <button
+      className="p-1 hover:bg-gray-700 rounded flex items-center space-x-2 border border-b-2"
+      onClick={handleNewChat}
+      aria-label="Create new chat"
+    >
+      <h3>New Chat</h3>
+      <FaPlus size={18} className="text-gray-400 mt-1" />
+    </button>
+    
+    <ul className="space-y-2 mt-2">
+      {chatHistories.map((chat) => (
+        <li
+          key={chat.id}
+          className={`px-2 py-1 rounded cursor-pointer ${
+            selectedChat === chat.id ? "bg-blue-600" : "hover:bg-gray-700"
+          }`}
+          onClick={() => handleSelectChat(chat.id)}
+          role="button"
+          aria-pressed={selectedChat === chat.id}
+          tabIndex={0}
+          onKeyPress={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              handleSelectChat(chat.id);
+            }
+          }}
+        >
+          {chat.title}
+        </li>
+      ))}
+    </ul>
+
+    {/* Chat Window */}
+    {selectedChat && (
+      <div className="mt-6">
+        <div className="flex items-center space-x-2 border-b pb-4">
+          <Avatar>
+            <AvatarImage src="https://via.placeholder.com/150" alt="AI" />
+            <AvatarFallback>AI</AvatarFallback>
+          </Avatar>
+          <h4 className="text-lg font-semibold">Chat with AI</h4>
         </div>
+
+        {/* Message Display */}
+        <ScrollArea className="mt-4 h-96 space-y-4">
+          <div className="space-y-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${
+                  message.sender === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
+                <div
+                  className={`max-w-xs p-3 rounded-lg ${
+                    message.sender === "user" ? "bg-blue-600 text-white" : "bg-gray-300 text-black"
+                  }`}
+                >
+                  {message.content}
+                </div>
+              </div>
+            ))}
+          </div>
+        </ScrollArea>
+
+        {/* Input Area */}
+        <div className="flex items-center mt-4 space-x-3">
+          <Input
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder={inputPlaceholder}
+            className="flex-1"
+          />
+          <Button
+            variant="outline"
+            onClick={handleSendMessage}
+            disabled={loading}
+            className="p-2"
+            aria-label="Send Message"
+          >
+            {loading ? (
+              <div className="w-5 h-5 border-4 border-t-transparent border-blue-600 rounded-full animate-spin"></div>
+            ) : (
+              <Send size={20} />
+            )}
+          </Button>
+        </div>
+      </div>
+    )}
+  </div>
         <div>
           <h3 className="mb-2 text-sm font-semibold text-gray-400">Profiles</h3>
           <ul className="space-y-2">
@@ -471,15 +557,15 @@ export function AdvancedRagAssistant() {
 
       {/* Right Sidebar */}
       <div className="w-64 bg-gray-800 p-4 flex flex-col shadow-lg">
-        <div className="mb-8">
+      <div className="mb-8">
           <h3 className="mb-2 text-sm font-semibold text-gray-400">Sources</h3>
           <ul className="space-y-2">
-            {documents.map((doc) => (
+            {["Doc1", "Doc2", "Doc3"].map((doc) => (
               <li
-                key={doc.files}
+                key={doc}
                 className="px-2 py-1 rounded hover:bg-gray-700 cursor-pointer"
               >
-                {doc.files}
+                {doc}
               </li>
             ))}
           </ul>
@@ -514,15 +600,29 @@ export function AdvancedRagAssistant() {
             <DialogTitle>Upload Files</DialogTitle>
           </DialogHeader>
           <div className="p-4 border-2 border-dashed border-gray-400 rounded-lg text-center">
-            <p>Drag & drop files here, or click to select files</p>
+            <input
+              type="file"
+              multiple
+              onChange={handleFileChange}
+              className="cursor-pointer"
+            />
             <p className="text-sm text-gray-400 mt-2">
-              Supported formats: PDF, TXT, Markdown, Audio
+              Supported formats: PNG, JPEG, PDF, TXT, Markdown
             </p>
           </div>
           <div className="flex justify-between mt-4">
             <Button variant="outline">Google Drive</Button>
             <Button variant="outline">Paste Link</Button>
             <Button variant="outline">Direct Input</Button>
+          </div>
+          <div className="mt-4 text-center">
+            <Button
+              variant="default"
+              onClick={handleUpload}
+              disabled={loading || !files}
+            >
+              {loading ? "Uploading..." : "Upload Files"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
