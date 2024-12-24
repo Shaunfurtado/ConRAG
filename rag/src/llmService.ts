@@ -57,11 +57,17 @@ export class LLMService {
       for await (const chunk of stream) {
         response += chunk;
       }
-    } else if(this.currentModel === 'metaai') {
-      await this.logger.log('Using Meta AI API');
-      const metaAiResponse = await axios.post('http://localhost:5000/metaai', { prompt });
-      response = metaAiResponse.data.response;
-    }
+    }// ...existing code...
+else if(this.currentModel === 'metaai') {
+  await this.logger.log('Using Meta AI API');
+  const metaAiResponse = await axios.post('http://localhost:5000/metaai', { prompt });
+  if (typeof metaAiResponse.data === 'object' && metaAiResponse.data !== null && 'response' in metaAiResponse.data) {
+    response = (metaAiResponse.data as { response: string }).response;
+  } else {
+    throw new Error('Invalid response data from Meta AI API');
+  }
+}
+
     else {
       throw new Error('Invalid model name');
     }

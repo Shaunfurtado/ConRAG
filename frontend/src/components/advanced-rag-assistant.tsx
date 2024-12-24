@@ -63,26 +63,19 @@ export function AdvancedRagAssistant() {
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef<any>(null);
-  const [inputText, setInputText] = useState(""); // Now using this as main input state
-  const [inputPlaceholder, setInputPlaceholder] = useState(
-    "Type your message..."
-  );
+  const [inputText, setInputText] = useState(""); // Main input state
+  const [inputPlaceholder, setInputPlaceholder] = useState("Type your message...");
 
   const [messages, setMessages] = useState<Message[]>([
     { id: "1", content: "Hello! How can I assist you today?", sender: "ai" },
   ]);
   const [loading, setLoading] = useState(false);
-  type Document = {
-    file_name: string;
-    // Add other properties if needed
-  };
-  
+  type Document = { file_name: string };
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [selectedSessionId, setSelectedSessionId] = useState(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [files, setFiles] = useState<FileList | null>(null);
 
   useEffect(() => {
-    // Fetch chat histories from the backend
     const fetchChatHistories = async () => {
       try {
         const response = await fetch("http://localhost:3001/conversations");
@@ -110,9 +103,7 @@ export function AdvancedRagAssistant() {
       try {
         const response = await fetch("http://localhost:3001/query", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ question: userMessage.content }),
         });
 
@@ -187,7 +178,6 @@ export function AdvancedRagAssistant() {
   }, []);
 
   const handleNewChat = async () => {
-    // Create a new chat in the backend
     try {
       const response = await fetch("http://localhost:3001/new-conversation", {
         method: "POST",
@@ -206,53 +196,75 @@ export function AdvancedRagAssistant() {
   const handleSelectChat = (chatId: string) => {
     setSelectedChat(chatId);
     // Fetch messages for the selected chat from the backend
-    // ...
   };
 
-  useEffect(() => {
-    const fetchDocuments = async () => {
-      if (!selectedSessionId) return;
 
-      try {
-        const response = await fetch(`http://localhost:3001/documents/${selectedSessionId}`);
-        const data = await response.json();
-        setDocuments(data.documents);
-      } catch (error) {
-        console.error('Error fetching documents:', error);
-      }
-    };
+// Allowed file types: Images, PDFs, Text files
+const allowedTypes = [
+  "image/png", 
+  "image/jpeg", 
+  "application/pdf", 
+  "text/plain",  // .txt files
+  "text/markdown" // .md files
+];
 
-    fetchDocuments();
-  }, [selectedSessionId]);
+// Handle file selection with validation
+const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const selectedFiles = event.target.files;
+  if (selectedFiles) {
+    // Validate that all selected files are of an allowed type
+    const isValidFile = Array.from(selectedFiles).every((file) =>
+      allowedTypes.includes(file.type)
+    );
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFiles(event.target.files);
-  };
+    if (isValidFile) {
+      setFiles(selectedFiles);
+    } else {
+      alert("One or more selected files are not supported. Please choose valid files.");
+    }
+  }
+};
 
-  const handleUpload = async () => {
-    if (!files) return;
+// Handle file upload
+const handleUpload = async () => {
+  if (!files) {
+    console.error("No files selected");
+    return;
+  }
 
-    const formData = new FormData();
-    Array.from(files).forEach(file => {
-      formData.append('files', file);
+  const formData = new FormData();
+  Array.from(files).forEach((file) => {
+    formData.append("files", file);
+  });
+
+  setLoading(true); // Show loading state
+
+  try {
+    const response = await fetch("http://localhost:3001/upload", {
+      method: "POST",
+      body: formData,
     });
 
-    try {
-      const response = await fetch('http://localhost:3001/upload', {
-        method: 'POST',
-        body: formData,
-      });
+    if (!response.ok) {
+      throw new Error("Failed to upload files");
+    }
 
-      const data = await response.json();
-      console.log(data.message);
+    const data = await response.json();
 
-         // Assuming the session ID is returned in the response
-         setSelectedSessionId(data.sessionId);
-        } catch (error) {
-          console.error('Error uploading files:', error);
-        }
-      };
-
+    if (data.success) {
+      setSelectedSessionId(data.sessionId);
+      alert("Files uploaded successfully!");
+    } else {
+      alert("Error during upload. Please try again.");
+    }
+  } catch (error) {
+    console.error("Error uploading files:", error);
+    alert("Error uploading files. Please try again later.");
+  } finally {
+    setLoading(false); // Hide loading state
+    setIsFileUploadOpen(false); // Close the modal or file upload dialog
+  }
+};
   return (
     <div className="flex h-screen bg-gray-900 text-gray-100">
       {/* Left Sidebar */}
@@ -476,10 +488,10 @@ export function AdvancedRagAssistant() {
           <ul className="space-y-2">
             {documents.map((doc) => (
               <li
-                key={doc.files}
+                key={doc.file_name}
                 className="px-2 py-1 rounded hover:bg-gray-700 cursor-pointer"
               >
-                {doc.files}
+                {doc.file_name}
               </li>
             ))}
           </ul>
@@ -514,15 +526,29 @@ export function AdvancedRagAssistant() {
             <DialogTitle>Upload Files</DialogTitle>
           </DialogHeader>
           <div className="p-4 border-2 border-dashed border-gray-400 rounded-lg text-center">
-            <p>Drag & drop files here, or click to select files</p>
+            <input
+              type="file"
+              multiple
+              onChange={handleFileChange}
+              className="cursor-pointer"
+            />
             <p className="text-sm text-gray-400 mt-2">
-              Supported formats: PDF, TXT, Markdown, Audio
+              Supported formats: PNG, JPEG, PDF, TXT, Markdown
             </p>
           </div>
           <div className="flex justify-between mt-4">
             <Button variant="outline">Google Drive</Button>
             <Button variant="outline">Paste Link</Button>
             <Button variant="outline">Direct Input</Button>
+          </div>
+          <div className="mt-4 text-center">
+            <Button
+              variant="primary"
+              onClick={handleUpload}
+              disabled={loading || !files}
+            >
+              {loading ? "Uploading..." : "Upload Files"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
