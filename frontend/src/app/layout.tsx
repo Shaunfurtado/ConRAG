@@ -29,6 +29,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        <footer className="bg-gray-800 text-white py-8">
+          <div className="container mx-auto px-4 text-center">
+            <p>&copy; 2024 ConRAG. All rights reserved.</p>
+          </div>
+        </footer>
       </body>
     </html>
   );
