@@ -71,7 +71,7 @@ export function AdvancedRagAssistant() {
   ]);
   const [loading, setLoading] = useState(false);
   type Document = { file_name: string };
-  const [documents, setDocuments] = useState<Document[]>([]);
+  
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [files, setFiles] = useState<FileList | null>(null);
 
@@ -483,15 +483,15 @@ const handleUpload = async () => {
 
       {/* Right Sidebar */}
       <div className="w-64 bg-gray-800 p-4 flex flex-col shadow-lg">
-        <div className="mb-8">
+      <div className="mb-8">
           <h3 className="mb-2 text-sm font-semibold text-gray-400">Sources</h3>
           <ul className="space-y-2">
-            {documents.map((doc) => (
+            {["Doc1", "Doc2", "Doc3"].map((doc) => (
               <li
-                key={doc.file_name}
+                key={doc}
                 className="px-2 py-1 rounded hover:bg-gray-700 cursor-pointer"
               >
-                {doc.file_name}
+                {doc}
               </li>
             ))}
           </ul>
@@ -543,7 +543,7 @@ const handleUpload = async () => {
           </div>
           <div className="mt-4 text-center">
             <Button
-              variant="primary"
+              variant="default"
               onClick={handleUpload}
               disabled={loading || !files}
             >
