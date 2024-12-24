@@ -177,25 +177,39 @@ export function AdvancedRagAssistant() {
     };
   }, []);
 
+  // Function to handle creating a new chat
   const handleNewChat = async () => {
+    setLoading(true); // Start loading state while fetching new chat
     try {
       const response = await fetch("http://localhost:3001/new-conversation", {
         method: "POST",
       });
       const data = await response.json();
+      // Add new chat to the chat histories and select the new chat
       setChatHistories((prevHistories) => [
         ...prevHistories,
         { id: data.id, title: `Chat ${data.id}` },
       ]);
-      setSelectedChat(data.id);
+      setSelectedChat(data.id); // Set the new chat as selected
+      setMessages([]); // Clear any previous messages
     } catch (error) {
       console.error("Error creating new chat:", error);
+    } finally {
+      setLoading(false); // Stop loading once the request is complete
     }
   };
 
-  const handleSelectChat = (chatId: string) => {
+  // Function to handle selecting an existing chat
+  const handleSelectChat = async (chatId: string) => {
     setSelectedChat(chatId);
-    // Fetch messages for the selected chat from the backend
+    try {
+      // Fetch messages for the selected chat from the backend
+      const response = await fetch(`http://localhost:3001/chat/${chatId}`);
+      const data = await response.json();
+      setMessages(data.messages); // Set messages of the selected chat
+    } catch (error) {
+      console.error("Error fetching chat messages:", error);
+    }
   };
 
 
@@ -277,39 +291,99 @@ const handleUpload = async () => {
           />
         </div>
         <div className="mb-8">
-          <h3 className="mb-2 text-sm font-semibold text-gray-400">
-            Chat History
-          </h3>
-          <button
-            className="p-1 hover:bg-gray-700 rounded flex items-center space-x-2 border border-b-2"
-            onClick={handleNewChat}
-            aria-label="Create new chat"
-          >
-            <h3>New Chat</h3>
-            <FaPlus size={18} className="text-gray-400 mt-1" />
-          </button>
-          <ul className="space-y-2 mt-2">
-            {chatHistories.map((chat) => (
-              <li
-                key={chat.id}
-                className={`px-2 py-1 rounded cursor-pointer ${
-                  selectedChat === chat.id ? "bg-blue-600" : "hover:bg-gray-700"
-                }`}
-                onClick={() => handleSelectChat(chat.id)}
-                role="button"
-                aria-pressed={selectedChat === chat.id}
-                tabIndex={0}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    handleSelectChat(chat.id);
-                  }
-                }}
-              >
-                {chat.title}
-              </li>
-            ))}
-          </ul>
+    {/* Chat History Section */}
+    <h3 className="mb-2 text-sm font-semibold text-gray-400">
+      Chat History
+    </h3>
+    <button
+      className="p-1 hover:bg-gray-700 rounded flex items-center space-x-2 border border-b-2"
+      onClick={handleNewChat}
+      aria-label="Create new chat"
+    >
+      <h3>New Chat</h3>
+      <FaPlus size={18} className="text-gray-400 mt-1" />
+    </button>
+    
+    <ul className="space-y-2 mt-2">
+      {chatHistories.map((chat) => (
+        <li
+          key={chat.id}
+          className={`px-2 py-1 rounded cursor-pointer ${
+            selectedChat === chat.id ? "bg-blue-600" : "hover:bg-gray-700"
+          }`}
+          onClick={() => handleSelectChat(chat.id)}
+          role="button"
+          aria-pressed={selectedChat === chat.id}
+          tabIndex={0}
+          onKeyPress={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              handleSelectChat(chat.id);
+            }
+          }}
+        >
+          {chat.title}
+        </li>
+      ))}
+    </ul>
+
+    {/* Chat Window */}
+    {selectedChat && (
+      <div className="mt-6">
+        <div className="flex items-center space-x-2 border-b pb-4">
+          <Avatar>
+            <AvatarImage src="https://via.placeholder.com/150" alt="AI" />
+            <AvatarFallback>AI</AvatarFallback>
+          </Avatar>
+          <h4 className="text-lg font-semibold">Chat with AI</h4>
         </div>
+
+        {/* Message Display */}
+        <ScrollArea className="mt-4 h-96 space-y-4">
+          <div className="space-y-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${
+                  message.sender === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
+                <div
+                  className={`max-w-xs p-3 rounded-lg ${
+                    message.sender === "user" ? "bg-blue-600 text-white" : "bg-gray-300 text-black"
+                  }`}
+                >
+                  {message.content}
+                </div>
+              </div>
+            ))}
+          </div>
+        </ScrollArea>
+
+        {/* Input Area */}
+        <div className="flex items-center mt-4 space-x-3">
+          <Input
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder={inputPlaceholder}
+            className="flex-1"
+          />
+          <Button
+            variant="outline"
+            onClick={handleSendMessage}
+            disabled={loading}
+            className="p-2"
+            aria-label="Send Message"
+          >
+            {loading ? (
+              <div className="w-5 h-5 border-4 border-t-transparent border-blue-600 rounded-full animate-spin"></div>
+            ) : (
+              <Send size={20} />
+            )}
+          </Button>
+        </div>
+      </div>
+    )}
+  </div>
         <div>
           <h3 className="mb-2 text-sm font-semibold text-gray-400">Profiles</h3>
           <ul className="space-y-2">
