@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ClipboardCopyIcon, Check , ClipboardCheckIcon } from "lucide-react";
 import { FaPlus } from "react-icons/fa6";
 import {
   Dialog,
@@ -65,7 +66,7 @@ export function AdvancedRagAssistant() {
   const recognitionRef = useRef<any>(null);
   const [inputText, setInputText] = useState(""); // Main input state
   const [inputPlaceholder, setInputPlaceholder] = useState("Type your message...");
-
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     { id: "1", content: "Hello! How can I assist you today?", sender: "ai" },
   ]);
@@ -424,77 +425,104 @@ const handleUpload = async () => {
         {/* Chat/Avatar Area */}
         <div className="flex-1 overflow-y-scroll">
           {activeTab === "chat" ? (
-            <ScrollArea className="flex-1 p-4 ">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${
-                    message.sender === "user" ? "justify-end" : "justify-start"
-                  } mb-4`}
-                >
-                  <div
-                    className={`flex ${
-                      message.sender === "user"
-                        ? "flex-row-reverse"
-                        : "flex-row"
-                    } items-start`}
-                  >
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage
-                        src={
-                          message.sender === "user"
-                            ? "/placeholder.svg?height=32&width=32"
-                            : "/placeholder.svg?height=32&width=32&text=AI"
-                        }
-                      />
-                      <AvatarFallback>
-                        {message.sender === "user" ? "U" : "AI"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div
-                      className={`mx-2 p-3 rounded-lg shadow-md ${
-                        message.sender === "user"
-                          ? "bg-blue-500 text-white"
-                          : "bg-white dark:bg-gray-800 text-gray-800 dark:text-white"
-                      }`}
-                    >
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          code({
-                            node,
-                            inline,
-                            className,
-                            children,
-                            ...props
-                          }) {
-                            const match = /language-(\w+)/.exec(
-                              className || ""
-                            );
-                            return !inline && match ? (
-                              <SyntaxHighlighter
-                                {...props}
-                                children={String(children).replace(/\n$/, "")}
-                                style={atomDark}
-                                language={match[1]}
-                                PreTag="div"
-                              />
-                            ) : (
-                              <code {...props} className={className}>
-                                {children}
-                              </code>
-                            );
-                          },
-                        }}
-                        className="prose dark:prose-invert max-w-none"
-                      >
-                        {message.content}
-                      </ReactMarkdown>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </ScrollArea>
+
+
+
+
+
+<ScrollArea className="flex-1 p-4">
+  {messages.map((message) => (
+    <div
+    key={message.id}
+    className={`flex ${
+      message.sender === "user" ? "justify-end" : "justify-start"
+    } mb-4`}
+  >
+    <div
+      className={`flex ${
+        message.sender === "user" ? "flex-row-reverse" : "flex-row"
+      } items-start`}
+    >
+      <Avatar className="w-8 h-8">
+        <AvatarImage
+          src={
+            message.sender === "user"
+              ? "/placeholder.svg?height=32&width=32"
+              : "/placeholder.svg?height=32&width=32&text=AI"
+          }
+        />
+        <AvatarFallback>
+          {message.sender === "user" ? "U" : "AI"}
+        </AvatarFallback>
+      </Avatar>
+      <div
+        className={`mx-2 p-3 rounded-lg shadow-md ${
+          message.sender === "user"
+            ? "bg-blue-500 text-white"
+            : "bg-white dark:bg-gray-800 text-gray-800 dark:text-white"
+        }`}
+      >
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            code({
+              node,
+              inline,
+              className,
+              children,
+              ...props
+            }) {
+              const match = /language-(\w+)/.exec(
+                className || ""
+              );
+              return !inline && match ? (
+                <SyntaxHighlighter
+                  {...props}
+                  children={String(children).replace(/\n$/, "")}
+                  style={atomDark}
+                  language={match[1]}
+                  PreTag="div"
+                />
+              ) : (
+                <code {...props} className={className}>
+                  {children}
+                </code>
+              );
+            },
+          }}
+          className="prose dark:prose-invert max-w-none"
+        >
+          {message.content}
+        </ReactMarkdown>
+      </div>
+    </div>
+    {message.sender !== "user" && (
+      <div className="mt-2 text-right">
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(message.content);
+            setCopiedMessageId(message.id);
+            setTimeout(() => setCopiedMessageId(null), 2000);
+          }}
+          className="flex items-center justify-center p-2"
+        >
+          {copiedMessageId === message.id ? (
+            <Check className="w-5 h-5 text-gray-400" />
+          ) : (
+            <ClipboardCopyIcon className="w-5 h-5 text-blue-500" />
+          )}
+        </button>
+      </div>
+    )}
+  </div>
+  ))}
+</ScrollArea>
+
+
+
+
+
+
           ) : (
             <div className="h-full flex flex-col items-center justify-center">
               <Avatar className="h-48 w-48 mb-4">
@@ -595,7 +623,7 @@ const handleUpload = async () => {
 
       {/* File Upload Modal */}
       <Dialog open={isFileUploadOpen} onOpenChange={setIsFileUploadOpen}>
-        <DialogContent>
+        <DialogContent >
           <DialogHeader>
             <DialogTitle>Upload Files</DialogTitle>
           </DialogHeader>
