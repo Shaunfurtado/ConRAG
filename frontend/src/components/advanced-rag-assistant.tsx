@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ClipboardCopyIcon, Check, Volume2Icon,AudioLines } from "lucide-react";
+import { ClipboardCopyIcon, Check, Volume2Icon,AudioLines,ClipboardCopy } from "lucide-react";
 import { FaPlus } from "react-icons/fa6";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   Dialog,
   DialogContent,
@@ -303,7 +304,11 @@ export function AdvancedRagAssistant() {
     synth.speak(utterance);
   };
 
-
+  const stopSpeaking = () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel(); // Cancels any ongoing speech
+    }
+  };
 
 
   return (
@@ -455,105 +460,138 @@ export function AdvancedRagAssistant() {
         {/* Chat/Avatar Area */}
         <div className="flex-1 overflow-y-scroll">
           {activeTab === "chat" ? (
-            <ScrollArea className="flex-1 p-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${
-                    message.sender === "user" ? "justify-end" : "justify-start"
-                  } mb-4`}
-                >
-                  <div
-                    className={`flex ${
-                      message.sender === "user"
-                        ? "flex-row-reverse"
-                        : "flex-row"
-                    } items-start`}
-                  >
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage
-                        src={
-                          message.sender === "user"
-                            ? "/placeholder.svg?height=32&width=32"
-                            : "/placeholder.svg?height=32&width=32&text=AI"
-                        }
-                      />
-                      <AvatarFallback>
-                        {message.sender === "user" ? "U" : "AI"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div
-                      className={`mx-2 p-3 rounded-lg shadow-md ${
-                        message.sender === "user"
-                          ? "bg-blue-500 text-white"
-                          : "bg-white dark:bg-gray-800 text-gray-800 dark:text-white"
-                      }`}
-                    >
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          code({
-                            node,
-                            inline,
-                            className,
-                            children,
-                            ...props
-                          }) {
-                            const match = /language-(\w+)/.exec(
-                              className || ""
-                            );
-                            return !inline && match ? (
-                              <SyntaxHighlighter
-                                {...props}
-                                children={String(children).replace(/\n$/, "")}
-                                style={atomDark}
-                                language={match[1]}
-                                PreTag="div"
-                              />
-                            ) : (
-                              <code {...props} className={className}>
-                                {children}
-                              </code>
-                            );
-                          },
-                        }}
-                        className="prose dark:prose-invert max-w-none"
-                      >
-                        {message.content}
-                      </ReactMarkdown>
-                    </div>
-                  </div>
-                  {message.sender !== "user" && (
-                    <div className="mt-2 flex justify-end items-center space-x-2">
-                    <button
-                      onClick={() => speakMessage(message.content, message.id)}
-                      className="flex items-center justify-center p-2"
-                    >
-                      {speakingMessageId === message.id ? (
-                        <AudioLines className="w-5 h-5 text-red-500" />
-                      ) : (
-                        <Volume2Icon className="w-5 h-5 text-green-500" />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(message.content);
-                        setCopiedMessageId(message.id);
-                        setTimeout(() => setCopiedMessageId(null), 2000);
-                      }}
-                      className="flex items-center justify-center p-2"
-                    >
-                      {copiedMessageId === message.id ? (
-                        <Check className="w-5 h-5 text-gray-400" />
-                      ) : (
-                        <ClipboardCopyIcon className="w-5 h-5 text-blue-500" />
-                      )}
-                    </button>
-                  </div>
-                  )}
-                </div>
-              ))}
-            </ScrollArea>
+
+
+
+
+<ScrollArea className="flex-1 p-4">
+{messages.map((message) => (
+  <div
+    key={message.id}
+    className={`flex ${
+      message.sender === "user" ? "justify-end" : "justify-start"
+    } mb-4`}
+  >
+    <div
+      className={`flex ${
+        message.sender === "user" ? "flex-row-reverse" : "flex-row"
+      } items-start`}
+    >
+      <Avatar className="w-8 h-8">
+        <AvatarImage
+          src={
+            message.sender === "user"
+              ? "/placeholder.svg?height=32&width=32"
+              : "/placeholder.svg?height=32&width=32&text=AI"
+          }
+        />
+        <AvatarFallback>
+          {message.sender === "user" ? "U" : "AI"}
+        </AvatarFallback>
+      </Avatar>
+      <div
+        className={`mx-2 p-3 rounded-lg shadow-md ${
+          message.sender === "user"
+            ? "bg-blue-500 text-white"
+            : "bg-white dark:bg-gray-800 text-gray-800 dark:text-white"
+        }`}
+      >
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            code({
+              node,
+              inline,
+              className,
+              children,
+              ...props
+            }) {
+              const match = /language-(\w+)/.exec(className || "");
+              return !inline && match ? (
+                <SyntaxHighlighter
+                  {...props}
+                  children={String(children).replace(/\n$/, "")}
+                  style={atomDark}
+                  language={match[1]}
+                  PreTag="div"
+                />
+              ) : (
+                <code {...props} className={className}>
+                  {children}
+                </code>
+              );
+            },
+          }}
+          className="prose dark:prose-invert max-w-none"
+        >
+          {message.content}
+        </ReactMarkdown>
+      </div>
+    </div>
+    {message.sender !== "user" && (
+      <div className="mt-2 flex justify-end items-center space-x-2">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  if (speakingMessageId === message.id) {
+                    stopSpeaking(); // Stop speaking function
+                    setSpeakingMessageId(null);
+                  } else {
+                    speakMessage(message.content, message.id);
+                    setSpeakingMessageId(message.id);
+                  }
+                }}
+              >
+                {speakingMessageId === message.id ? (
+                  <AudioLines className="w-5 h-5 text-red-500" />
+                ) : (
+                  <Volume2 className="w-5 h-5 text-green-500" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{speakingMessageId === message.id ? "Stop" : "Read aloud"}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  navigator.clipboard.writeText(message.content);
+                  setCopiedMessageId(message.id);
+                  setTimeout(() => setCopiedMessageId(null), 5000); // Revert after 5 seconds
+                }}
+              >
+                {copiedMessageId === message.id ? (
+                  <Check className="w-5 h-5 text-gray-400" />
+                ) : (
+                  <ClipboardCopy className="w-5 h-5 text-blue-500" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{copiedMessageId === message.id ? "Copied!" : "Copy to clipboard"}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    )}
+  </div>
+))}
+</ScrollArea>
+
+
+
+
+
           ) : (
             <div className="h-full flex flex-col items-center justify-center">
               <Avatar className="h-48 w-48 mb-4">
