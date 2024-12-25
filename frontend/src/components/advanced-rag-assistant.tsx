@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ClipboardCopyIcon, Check, ClipboardCheckIcon } from "lucide-react";
+import { ClipboardCopyIcon, Check, Volume2Icon,AudioLines } from "lucide-react";
 import { FaPlus } from "react-icons/fa6";
 import {
   Dialog,
@@ -69,6 +69,8 @@ export function AdvancedRagAssistant() {
     "Type your message..."
   );
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
+
   const [messages, setMessages] = useState<Message[]>([
     { id: "1", content: "Hello! How can I assist you today?", sender: "ai" },
   ]);
@@ -285,6 +287,25 @@ export function AdvancedRagAssistant() {
       setIsFileUploadOpen(false); // Close the modal or file upload dialog
     }
   };
+
+
+  const speakMessage = (text: string, messageId: string) => {
+    const synth = window.speechSynthesis;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "en-US"; // Set to desired language
+    
+    setSpeakingMessageId(messageId);
+
+    utterance.onend = () => {
+      setSpeakingMessageId(null);
+    };
+
+    synth.speak(utterance);
+  };
+
+
+
+
   return (
     <div className="flex h-screen bg-gray-900 text-gray-100">
       {/* Left Sidebar */}
@@ -503,22 +524,32 @@ export function AdvancedRagAssistant() {
                     </div>
                   </div>
                   {message.sender !== "user" && (
-                    <div className="mt-2 text-right">
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(message.content);
-                          setCopiedMessageId(message.id);
-                          setTimeout(() => setCopiedMessageId(null), 2000);
-                        }}
-                        className="flex items-center justify-center p-2"
-                      >
-                        {copiedMessageId === message.id ? (
-                          <Check className="w-5 h-5 text-gray-400" />
-                        ) : (
-                          <ClipboardCopyIcon className="w-5 h-5 text-blue-500" />
-                        )}
-                      </button>
-                    </div>
+                    <div className="mt-2 flex justify-end items-center space-x-2">
+                    <button
+                      onClick={() => speakMessage(message.content, message.id)}
+                      className="flex items-center justify-center p-2"
+                    >
+                      {speakingMessageId === message.id ? (
+                        <AudioLines className="w-5 h-5 text-red-500" />
+                      ) : (
+                        <Volume2Icon className="w-5 h-5 text-green-500" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(message.content);
+                        setCopiedMessageId(message.id);
+                        setTimeout(() => setCopiedMessageId(null), 2000);
+                      }}
+                      className="flex items-center justify-center p-2"
+                    >
+                      {copiedMessageId === message.id ? (
+                        <Check className="w-5 h-5 text-gray-400" />
+                      ) : (
+                        <ClipboardCopyIcon className="w-5 h-5 text-blue-500" />
+                      )}
+                    </button>
+                  </div>
                   )}
                 </div>
               ))}
@@ -715,3 +746,4 @@ export function AdvancedRagAssistant() {
     </div>
   );
 }
+    
