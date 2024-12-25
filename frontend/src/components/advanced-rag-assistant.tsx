@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ClipboardCopyIcon, Check , ClipboardCheckIcon } from "lucide-react";
+import { ClipboardCopyIcon, Check, ClipboardCheckIcon } from "lucide-react";
 import { FaPlus } from "react-icons/fa6";
 import {
   Dialog,
@@ -65,15 +65,19 @@ export function AdvancedRagAssistant() {
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef<any>(null);
   const [inputText, setInputText] = useState(""); // Main input state
-  const [inputPlaceholder, setInputPlaceholder] = useState("Type your message...");
+  const [inputPlaceholder, setInputPlaceholder] = useState(
+    "Type your message..."
+  );
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     { id: "1", content: "Hello! How can I assist you today?", sender: "ai" },
   ]);
   const [loading, setLoading] = useState(false);
   type Document = { file_name: string };
-  
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
+    null
+  );
   const [files, setFiles] = useState<FileList | null>(null);
 
   useEffect(() => {
@@ -213,73 +217,74 @@ export function AdvancedRagAssistant() {
     }
   };
 
+  // Allowed file types: Images, PDFs, Text files
+  const allowedTypes = [
+    "image/png",
+    "image/jpeg",
+    "application/pdf",
+    "text/plain", // .txt files
+    "text/markdown", // .md files
+  ];
 
-// Allowed file types: Images, PDFs, Text files
-const allowedTypes = [
-  "image/png", 
-  "image/jpeg", 
-  "application/pdf", 
-  "text/plain",  // .txt files
-  "text/markdown" // .md files
-];
+  // Handle file selection with validation
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = event.target.files;
+    if (selectedFiles) {
+      // Validate that all selected files are of an allowed type
+      const isValidFile = Array.from(selectedFiles).every((file) =>
+        allowedTypes.includes(file.type)
+      );
 
-// Handle file selection with validation
-const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-  const selectedFiles = event.target.files;
-  if (selectedFiles) {
-    // Validate that all selected files are of an allowed type
-    const isValidFile = Array.from(selectedFiles).every((file) =>
-      allowedTypes.includes(file.type)
-    );
-
-    if (isValidFile) {
-      setFiles(selectedFiles);
-    } else {
-      alert("One or more selected files are not supported. Please choose valid files.");
+      if (isValidFile) {
+        setFiles(selectedFiles);
+      } else {
+        alert(
+          "One or more selected files are not supported. Please choose valid files."
+        );
+      }
     }
-  }
-};
+  };
 
-// Handle file upload
-const handleUpload = async () => {
-  if (!files) {
-    console.error("No files selected");
-    return;
-  }
+  // Handle file upload
+  const handleUpload = async () => {
+    if (!files) {
+      console.error("No files selected");
+      return;
+    }
 
-  const formData = new FormData();
-  Array.from(files).forEach((file) => {
-    formData.append("files", file);
-  });
-
-  setLoading(true); // Show loading state
-
-  try {
-    const response = await fetch("http://localhost:3001/upload", {
-      method: "POST",
-      body: formData,
+    const formData = new FormData();
+    Array.from(files).forEach((file) => {
+      formData.append("files", file);
     });
 
-    if (!response.ok) {
-      throw new Error("Failed to upload files");
-    }
+    setLoading(true); // Show loading state
 
-    const data = await response.json();
+    try {
+      const response = await fetch("http://localhost:3001/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-    if (data) {
-      setSelectedSessionId(data.sessionId);
-      alert("Files uploaded successfully!");
-    } else {
-      alert("Error during upload. Please try again.");
+      if (!response.ok) {
+        throw new Error("Failed to upload files");
+      }
+
+      const data = await response.json();
+
+      if (data) {
+        setSelectedSessionId(data.sessionId);
+        alert("Files uploaded successfully!");
+      } else {
+        alert("Error during upload. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error uploading files:", error);
+      alert("Error uploading files. Please try again later.");
+    } finally {
+      setLoading(false); // Hide loading state
+      setIsFileUploadOpen(false); // Close the modal or file upload dialog
     }
-  } catch (error) {
-    console.error("Error uploading files:", error);
-    alert("Error uploading files. Please try again later.");
-  } finally {
-    setLoading(false); // Hide loading state
-    setIsFileUploadOpen(false); // Close the modal or file upload dialog
-  }
-};
+  };
   return (
     <div className="flex h-screen bg-gray-900 text-gray-100">
       {/* Left Sidebar */}
@@ -292,99 +297,103 @@ const handleUpload = async () => {
           />
         </div>
         <div className="mb-8">
-    {/* Chat History Section */}
-    <h3 className="mb-2 text-sm font-semibold text-gray-400">
-      Chat History
-    </h3>
-    <button
-      className="p-1 hover:bg-gray-700 rounded flex items-center space-x-2 border border-b-2"
-      onClick={handleNewChat}
-      aria-label="Create new chat"
-    >
-      <h3>New Chat</h3>
-      <FaPlus size={18} className="text-gray-400 mt-1" />
-    </button>
-    
-    <ul className="space-y-2 mt-2">
-      {chatHistories.map((chat) => (
-        <li
-          key={chat.id}
-          className={`px-2 py-1 rounded cursor-pointer ${
-            selectedChat === chat.id ? "bg-blue-600" : "hover:bg-gray-700"
-          }`}
-          onClick={() => handleSelectChat(chat.id)}
-          role="button"
-          aria-pressed={selectedChat === chat.id}
-          tabIndex={0}
-          onKeyPress={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              handleSelectChat(chat.id);
-            }
-          }}
-        >
-          {chat.title}
-        </li>
-      ))}
-    </ul>
-
-    {/* Chat Window */}
-    {selectedChat && (
-      <div className="mt-6">
-        <div className="flex items-center space-x-2 border-b pb-4">
-          <Avatar>
-            <AvatarImage src="https://via.placeholder.com/150" alt="AI" />
-            <AvatarFallback>AI</AvatarFallback>
-          </Avatar>
-          <h4 className="text-lg font-semibold">Chat with AI</h4>
-        </div>
-
-        {/* Message Display */}
-        <ScrollArea className="mt-4 h-96 space-y-4">
-          <div className="space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${
-                  message.sender === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`max-w-xs p-3 rounded-lg ${
-                    message.sender === "user" ? "bg-blue-600 text-white" : "bg-gray-300 text-black"
-                  }`}
-                >
-                  {message.content}
-                </div>
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
-
-        {/* Input Area */}
-        <div className="flex items-center mt-4 space-x-3">
-          <Input
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder={inputPlaceholder}
-            className="flex-1"
-          />
-          <Button
-            variant="outline"
-            onClick={handleSendMessage}
-            disabled={loading}
-            className="p-2"
-            aria-label="Send Message"
+          {/* Chat History Section */}
+          <h3 className="mb-2 text-sm font-semibold text-gray-400">
+            Chat History
+          </h3>
+          <button
+            className="p-1 hover:bg-gray-700 rounded flex items-center space-x-2 border border-b-2"
+            onClick={handleNewChat}
+            aria-label="Create new chat"
           >
-            {loading ? (
-              <div className="w-5 h-5 border-4 border-t-transparent border-blue-600 rounded-full animate-spin"></div>
-            ) : (
-              <Send size={20} />
-            )}
-          </Button>
+            <h3>New Chat</h3>
+            <FaPlus size={18} className="text-gray-400 mt-1" />
+          </button>
+
+          <ul className="space-y-2 mt-2">
+            {chatHistories.map((chat) => (
+              <li
+                key={chat.id}
+                className={`px-2 py-1 rounded cursor-pointer ${
+                  selectedChat === chat.id ? "bg-blue-600" : "hover:bg-gray-700"
+                }`}
+                onClick={() => handleSelectChat(chat.id)}
+                role="button"
+                aria-pressed={selectedChat === chat.id}
+                tabIndex={0}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    handleSelectChat(chat.id);
+                  }
+                }}
+              >
+                {chat.title}
+              </li>
+            ))}
+          </ul>
+
+          {/* Chat Window */}
+          {selectedChat && (
+            <div className="mt-6">
+              <div className="flex items-center space-x-2 border-b pb-4">
+                <Avatar>
+                  <AvatarImage src="https://via.placeholder.com/150" alt="AI" />
+                  <AvatarFallback>AI</AvatarFallback>
+                </Avatar>
+                <h4 className="text-lg font-semibold">Chat with AI</h4>
+              </div>
+
+              {/* Message Display */}
+              <ScrollArea className="mt-4 h-96 space-y-4">
+                <div className="space-y-4">
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex ${
+                        message.sender === "user"
+                          ? "justify-end"
+                          : "justify-start"
+                      }`}
+                    >
+                      <div
+                        className={`max-w-xs p-3 rounded-lg ${
+                          message.sender === "user"
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-300 text-black"
+                        }`}
+                      >
+                        {message.content}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+
+              {/* Input Area */}
+              <div className="flex items-center mt-4 space-x-3">
+                <Input
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder={inputPlaceholder}
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  onClick={handleSendMessage}
+                  disabled={loading}
+                  className="p-2"
+                  aria-label="Send Message"
+                >
+                  {loading ? (
+                    <div className="w-5 h-5 border-4 border-t-transparent border-blue-600 rounded-full animate-spin"></div>
+                  ) : (
+                    <Send size={20} />
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
-      </div>
-    )}
-  </div>
         <div>
           <h3 className="mb-2 text-sm font-semibold text-gray-400">Profiles</h3>
           <ul className="space-y-2">
@@ -425,104 +434,95 @@ const handleUpload = async () => {
         {/* Chat/Avatar Area */}
         <div className="flex-1 overflow-y-scroll">
           {activeTab === "chat" ? (
-
-
-
-
-
-<ScrollArea className="flex-1 p-4">
-  {messages.map((message) => (
-    <div
-    key={message.id}
-    className={`flex ${
-      message.sender === "user" ? "justify-end" : "justify-start"
-    } mb-4`}
-  >
-    <div
-      className={`flex ${
-        message.sender === "user" ? "flex-row-reverse" : "flex-row"
-      } items-start`}
-    >
-      <Avatar className="w-8 h-8">
-        <AvatarImage
-          src={
-            message.sender === "user"
-              ? "/placeholder.svg?height=32&width=32"
-              : "/placeholder.svg?height=32&width=32&text=AI"
-          }
-        />
-        <AvatarFallback>
-          {message.sender === "user" ? "U" : "AI"}
-        </AvatarFallback>
-      </Avatar>
-      <div
-        className={`mx-2 p-3 rounded-lg shadow-md ${
-          message.sender === "user"
-            ? "bg-blue-500 text-white"
-            : "bg-white dark:bg-gray-800 text-gray-800 dark:text-white"
-        }`}
-      >
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          components={{
-            code({
-              node,
-              inline,
-              className,
-              children,
-              ...props
-            }) {
-              const match = /language-(\w+)/.exec(
-                className || ""
-              );
-              return !inline && match ? (
-                <SyntaxHighlighter
-                  {...props}
-                  children={String(children).replace(/\n$/, "")}
-                  style={atomDark}
-                  language={match[1]}
-                  PreTag="div"
-                />
-              ) : (
-                <code {...props} className={className}>
-                  {children}
-                </code>
-              );
-            },
-          }}
-          className="prose dark:prose-invert max-w-none"
-        >
-          {message.content}
-        </ReactMarkdown>
-      </div>
-    </div>
-    {message.sender !== "user" && (
-      <div className="mt-2 text-right">
-        <button
-          onClick={() => {
-            navigator.clipboard.writeText(message.content);
-            setCopiedMessageId(message.id);
-            setTimeout(() => setCopiedMessageId(null), 2000);
-          }}
-          className="flex items-center justify-center p-2"
-        >
-          {copiedMessageId === message.id ? (
-            <Check className="w-5 h-5 text-gray-400" />
-          ) : (
-            <ClipboardCopyIcon className="w-5 h-5 text-blue-500" />
-          )}
-        </button>
-      </div>
-    )}
-  </div>
-  ))}
-</ScrollArea>
-
-
-
-
-
-
+            <ScrollArea className="flex-1 p-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${
+                    message.sender === "user" ? "justify-end" : "justify-start"
+                  } mb-4`}
+                >
+                  <div
+                    className={`flex ${
+                      message.sender === "user"
+                        ? "flex-row-reverse"
+                        : "flex-row"
+                    } items-start`}
+                  >
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage
+                        src={
+                          message.sender === "user"
+                            ? "/placeholder.svg?height=32&width=32"
+                            : "/placeholder.svg?height=32&width=32&text=AI"
+                        }
+                      />
+                      <AvatarFallback>
+                        {message.sender === "user" ? "U" : "AI"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div
+                      className={`mx-2 p-3 rounded-lg shadow-md ${
+                        message.sender === "user"
+                          ? "bg-blue-500 text-white"
+                          : "bg-white dark:bg-gray-800 text-gray-800 dark:text-white"
+                      }`}
+                    >
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          code({
+                            node,
+                            inline,
+                            className,
+                            children,
+                            ...props
+                          }) {
+                            const match = /language-(\w+)/.exec(
+                              className || ""
+                            );
+                            return !inline && match ? (
+                              <SyntaxHighlighter
+                                {...props}
+                                children={String(children).replace(/\n$/, "")}
+                                style={atomDark}
+                                language={match[1]}
+                                PreTag="div"
+                              />
+                            ) : (
+                              <code {...props} className={className}>
+                                {children}
+                              </code>
+                            );
+                          },
+                        }}
+                        className="prose dark:prose-invert max-w-none"
+                      >
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                  {message.sender !== "user" && (
+                    <div className="mt-2 text-right">
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(message.content);
+                          setCopiedMessageId(message.id);
+                          setTimeout(() => setCopiedMessageId(null), 2000);
+                        }}
+                        className="flex items-center justify-center p-2"
+                      >
+                        {copiedMessageId === message.id ? (
+                          <Check className="w-5 h-5 text-gray-400" />
+                        ) : (
+                          <ClipboardCopyIcon className="w-5 h-5 text-blue-500" />
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </ScrollArea>
           ) : (
             <div className="h-full flex flex-col items-center justify-center">
               <Avatar className="h-48 w-48 mb-4">
@@ -542,8 +542,6 @@ const handleUpload = async () => {
             </div>
           )}
         </div>
-
-        
 
         {/* Message Input */}
         <div className="bg-gray-800 p-4 flex items-center shadow-lg">
@@ -585,7 +583,7 @@ const handleUpload = async () => {
 
       {/* Right Sidebar */}
       <div className="w-64 bg-gray-800 p-4 flex flex-col shadow-lg">
-      <div className="mb-8">
+        <div className="mb-8">
           <h3 className="mb-2 text-sm font-semibold text-gray-400">Sources</h3>
           <ul className="space-y-2">
             {["Doc1", "Doc2", "Doc3"].map((doc) => (
@@ -623,7 +621,7 @@ const handleUpload = async () => {
 
       {/* File Upload Modal */}
       <Dialog open={isFileUploadOpen} onOpenChange={setIsFileUploadOpen}>
-        <DialogContent >
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Upload Files</DialogTitle>
           </DialogHeader>
