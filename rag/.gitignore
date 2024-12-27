@@ -31,4 +31,4 @@ yarn-error.log*
 rag_conversations.db
 
 # logs
-logs
+logs/
