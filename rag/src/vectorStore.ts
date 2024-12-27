@@ -1,10 +1,8 @@
 import { MilvusClient, DataType, DataTypeMap} from '@zilliz/milvus2-sdk-node';
-import { v4 as uuidv4 } from 'uuid';
 import { hexoid } from 'hexoid';
 import { Document } from './types';
 import { Logger } from './logger';
 import { Graph } from './graph';
-import { config } from './config';
 import { DocumentMetadata } from './documentLoader';
 import { BM25Retriever } from '@langchain/community/retrievers/bm25';
 
