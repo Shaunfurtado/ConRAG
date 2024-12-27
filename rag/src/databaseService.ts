@@ -2,6 +2,7 @@
 import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import { v4 as uuidv4 } from 'uuid';
+import { hexoid } from 'hexoid';
 import { Logger } from './logger';
 
 interface ConversationTurn {
@@ -23,7 +24,7 @@ export class DatabaseService {
 
   constructor() {
     this.logger = Logger.getInstance();
-    this.sessionId = uuidv4();
+    this.sessionId = hexoid()();
     this.sessionIds.push(this.sessionId);
   }
 
@@ -34,7 +35,7 @@ export class DatabaseService {
 
   // Method to reset or start a new session
   startNewSession(): Promise<string> {
-    this.sessionId = uuidv4();  // Generate a new session ID
+    this.sessionId = hexoid()();  // Generate a new session ID
     this.sessionIds.push(this.sessionId);
     this.logger.log(`New session started with sessionId: ${this.sessionId}`);
     return Promise.resolve(this.sessionId);  // Return the new session ID
@@ -126,7 +127,7 @@ export class DatabaseService {
     try {
       await this.db.run(
         'INSERT INTO conversations (id, session_id, question, answer) VALUES (?, ?, ?, ?)',
-        [uuidv4(), this.sessionId, question, answer]
+        [hexoid()(), this.sessionId, question, answer]
       );
       await this.logger.log('Conversation saved to database');
     } catch (error) {
@@ -165,7 +166,7 @@ export class DatabaseService {
       for (const doc of documents) {
         await this.db.run(
           'INSERT INTO documents (id, session_id, file_name, file_path) VALUES (?, ?, ?, ?)',
-          [uuidv4(), sessionId, doc.file_name, doc.file_path]  // Use consistent session ID
+          [hexoid()(), sessionId, doc.file_name, doc.file_path]  // Use consistent session ID
         );
       }
       await this.logger.log('Document metadata saved to database under session ' + sessionId);
