@@ -350,9 +350,9 @@ export function AdvancedRagAssistant() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-900 text-gray-100">
+    <div className="flex h-screen bg-gray-100 text-black">
       {/* Left Sidebar */}
-      <div className="w-64 bg-gray-800 p-4 flex flex-col shadow-lg">
+      <div className="w-64 bg-gray-100 p-4 flex flex-col shadow-lg">
         <div className="mb-8">
           <img
             src="/placeholder.svg?height=40&width=40"
@@ -362,11 +362,11 @@ export function AdvancedRagAssistant() {
         </div>
         <div className="mb-8">
           {/* Chat History Section */}
-          <h3 className="mb-2 text-sm font-semibold text-gray-400">
+          <h3 className="mb-2 text-sm font-semibold text-black">
             Chat History
           </h3>
           <button
-            className="p-1 hover:bg-gray-700 rounded flex items-center space-x-2 border border-b-2"
+            className="p-1 hover:bg-gray-200 rounded flex items-center space-x-2 border border-b-2"
             onClick={handleNewChat}
             aria-label="Create new chat"
           >
@@ -379,7 +379,7 @@ export function AdvancedRagAssistant() {
               <li
                 key={chat.id}
                 className={`px-2 py-1 rounded cursor-pointer ${
-                  selectedChat === chat.id ? "bg-blue-600" : "hover:bg-gray-700"
+                  selectedChat === chat.id ? "bg-white" : "hover:bg-gray-200"
                 }`}
                 onClick={() => handleSelectChat(chat.id)}
                 role="button"
@@ -422,7 +422,7 @@ export function AdvancedRagAssistant() {
                       <div
                         className={`max-w-xs p-3 rounded-lg ${
                           message.sender === "user"
-                            ? "bg-blue-600 text-white"
+                            ? "bg-gray-300 text-black"
                             : "bg-gray-300 text-black"
                         }`}
                       >
@@ -467,8 +467,8 @@ export function AdvancedRagAssistant() {
                   key={profile}
                   className={`px-2 py-1 rounded cursor-pointer ${
                     activeProfile === profile
-                      ? "bg-blue-600"
-                      : "hover:bg-gray-700"
+                      ? "bg-black text-white"
+                      : "hover:bg-gray-200"
                   }`}
                   onClick={() => setActiveProfile(profile)}
                 >
@@ -483,8 +483,8 @@ export function AdvancedRagAssistant() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-y-auto h-full">
         {/* Header */}
-        <header className="bg-gray-800 p-4 flex items-center justify-between header shadow-lg">
-          <h2 className="text-xl font-bold text-white">AI Assistant</h2>
+        <header className="bg-gray-100 p-4 flex items-center justify-between header shadow-lg">
+          <h2 className="text-xl font-bold text-black">AI Assistant</h2>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-64">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="chat">Chat</TabsTrigger>
@@ -529,7 +529,7 @@ export function AdvancedRagAssistant() {
                       <div
                         className={`mx-2 p-3 rounded-lg shadow-md ${
                           message.sender === "user"
-                            ? "bg-blue-500 text-white"
+                            ? "bg-gray-200 text-black"
                             : "bg-white dark:bg-gray-800 text-gray-800 dark:text-white"
                         }`}
                       >
@@ -662,7 +662,7 @@ export function AdvancedRagAssistant() {
         </div>
 
         {/* Message Input */}
-        <div className="bg-gray-800 p-4 flex items-center shadow-lg">
+        <div className="bg-gray-100 p-4 flex items-center shadow-lg">
           <Button
             variant="outline"
             size="icon"
@@ -684,14 +684,14 @@ export function AdvancedRagAssistant() {
             <PaperclipIcon className="h-4 w-4 text-yellow-500" />
           </Button>
           <Input
-            className="flex-1 bg-gray-700 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
+            className="flex-1 bg-white text-black placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
             placeholder={inputPlaceholder}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
           />
           <Button
-            className="ml-2 bg-blue-500 hover:bg-blue-600 text-white"
+            className="ml-2 bg-black hover:bg-black/80 text-white"
             onClick={handleSendMessage}
           >
             <Send className="h-4 w-4" />
@@ -700,14 +700,14 @@ export function AdvancedRagAssistant() {
       </div>
 
       {/* Right Sidebar */}
-      <div className="w-64 bg-gray-800 p-4 flex flex-col shadow-lg">
+      <div className="w-64 bg-gray-100 p-4 flex flex-col shadow-lg">
         <div className="mb-8">
           <h3 className="mb-2 text-sm font-semibold text-gray-400">Sources</h3>
           <ul className="space-y-2">
             {["Doc1", "Doc2", "Doc3"].map((doc) => (
               <li
                 key={doc}
-                className="px-2 py-1 rounded hover:bg-gray-700 cursor-pointer"
+                className="px-2 py-1 rounded hover:bg-gray-200 cursor-pointer"
               >
                 {doc}
               </li>
@@ -716,16 +716,16 @@ export function AdvancedRagAssistant() {
         </div>
         <Button
           variant="outline"
-          className="mb-8 bg-gray-700 hover:bg-gray-600 text-white"
+          className="mb-8 bg-gray-100 hover:bg-gray-200 text-black"
           onClick={() => setIsSettingsOpen(true)}
         >
           <Settings className="mr-2 h-4 w-4" /> Settings
         </Button>
         <div>
-          <h3 className="mb-2 text-sm font-semibold text-gray-400">
+          <h3 className="mb-2 text-sm font-semibold text-black">
             Knowledge Base
           </h3>
-          <div className="bg-gray-700 rounded p-2 text-sm">
+          <div className="bg-gray-100 rounded p-2 text-sm text-black">
             Relevant information retrieved during chat would be displayed
             here...
           </div>
@@ -733,7 +733,7 @@ export function AdvancedRagAssistant() {
       </div>
 
       {/* Floating Action Button */}
-      <Button className="fixed bottom-4 right-4 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg">
+      <Button className="fixed bottom-4 right-4 rounded-full bg-gray-100 hover:bg-gray-200 text-black shadow-lg">
         <Plus className="h-4 w-4" />
       </Button>
 
