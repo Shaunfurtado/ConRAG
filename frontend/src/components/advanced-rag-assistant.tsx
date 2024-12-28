@@ -302,23 +302,50 @@ export function AdvancedRagAssistant() {
     }
   };
 
+  const splitText = (text: string): string[] => {
+    // Splits text into sentences or smaller chunks
+    return text.match(/[^.!?]+[.!?]+|[^.!?]+/g) || [];
+  };
+
   const speakMessage = (text: string, messageId: string) => {
     const synth = window.speechSynthesis;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "en-GB"; // Set to desired language
+    const utterances = splitText(text); // Split text into chunks
+    let currentUtteranceIndex = 0;
 
-    setSpeakingMessageId(messageId);
+    const speakNext = () => {
+      if (currentUtteranceIndex < utterances.length) {
+        const utterance = new SpeechSynthesisUtterance(
+          utterances[currentUtteranceIndex].trim()
+        );
+        utterance.lang = "en-GB"; // Set language
 
-    utterance.onend = () => {
-      setSpeakingMessageId(null);
+        // Move to the next chunk when speaking finishes
+        utterance.onend = () => {
+          currentUtteranceIndex++;
+          speakNext();
+        };
+
+        // Handle any speech synthesis error
+        utterance.onerror = (e) => {
+          console.error("Speech synthesis error:", e);
+          setSpeakingMessageId(null);
+        };
+
+        synth.speak(utterance); // Speak the current chunk
+      } else {
+        setSpeakingMessageId(null); // Speech finished
+      }
     };
 
-    synth.speak(utterance);
+    // Stop any currently speaking utterances before starting a new one
+    synth.cancel();
+    setSpeakingMessageId(messageId);
+    speakNext(); // Start speaking
   };
 
   const stopSpeaking = () => {
     if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel(); // Cancels any ongoing speech
+      window.speechSynthesis.cancel(); // Stops any ongoing speech
     }
   };
 
@@ -547,14 +574,13 @@ export function AdvancedRagAssistant() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="w-4 h-4" // Reduced icon size
+                                  className="w-4 h-4"
                                   onClick={() => {
                                     if (speakingMessageId === message.id) {
-                                      stopSpeaking(); // Stop speaking function
+                                      stopSpeaking(); // Stop ongoing speech
                                       setSpeakingMessageId(null);
                                     } else {
-                                      speakMessage(message.content, message.id);
-                                      setSpeakingMessageId(message.id);
+                                      speakMessage(message.content, message.id); // Start speaking
                                     }
                                   }}
                                 >
