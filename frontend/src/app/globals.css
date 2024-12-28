@@ -61,9 +61,9 @@
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border; /* Apply border color globally */
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground; /* Set background and text colors */
   }
 }
