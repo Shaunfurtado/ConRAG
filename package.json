@@ -3,10 +3,27 @@
   "version": "1.0.0",
   "description": "Conversational AI with RAG for Document-Based Queries with natural speech.",
   "private": true,
+  "workspaces": [
+    "rag",
+    "frontend",
+    "Milvus"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "lint": "turbo run lint",
+    "install:all": "npm install && npm run install:rag && npm run install:frontend && npm run install:python",
+    "install:rag": "cd rag && npm install",
+    "install:frontend": "cd frontend && npm install",
+    "install:python": "cd rag/servers && pip install -r requirements.txt"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^9.1.1",
+    "turbo": "^2.3.3"
+  },
+  "packageManager": "npm@10.8.2"
 }
