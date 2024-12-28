@@ -16,7 +16,7 @@
     "install:all": "npm install && npm run install:rag && npm run install:frontend && npm run install:python",
     "install:rag": "cd rag && npm install",
     "install:frontend": "cd frontend && npm install",
-    "install:python": "cd rag/servers && pip install -r requirements.txt"
+    "install:python": "cd rag/servers && pip install flask sentence_transformers meta_ai_api"
   },
   "keywords": [],
   "author": "",
