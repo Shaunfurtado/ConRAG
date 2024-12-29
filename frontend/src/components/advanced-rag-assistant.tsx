@@ -38,7 +38,7 @@ export function AdvancedRagAssistant() {
   const [messages, setMessages] = useState<Message[]>([
     { id: "1", content: "Hello! How can I assist you today?", sender: "ai" },
   ]);
-
+  const [documents, setDocuments] = useState<string[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef<any>(null);
@@ -53,6 +53,16 @@ export function AdvancedRagAssistant() {
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<FileList | null>(null);
 
+  const fetchDocuments = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/documents");
+      const data = await response.json();
+      setDocuments(data.map((doc: { file_name: string }) => doc.file_name));
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+    }
+  };
+
   useEffect(() => {
     const fetchChatHistories = async () => {
       try {
@@ -65,6 +75,7 @@ export function AdvancedRagAssistant() {
     };
 
     fetchChatHistories();
+    fetchDocuments();
   }, []);
 
   const handleSendMessage = async () => {
@@ -185,6 +196,7 @@ export function AdvancedRagAssistant() {
       const data = await response.json();
       if (data) {
         alert("Files uploaded successfully!");
+        fetchDocuments();
       } else {
         alert("Error during upload. Please try again.");
       }
@@ -328,7 +340,7 @@ export function AdvancedRagAssistant() {
         </header>
 
         {/* Chat/Avatar Area */}
-        <div className="flex-1 overflow-y-scroll">
+        <div className="flex-1 overflow-y-scroll mt-3">
           {activeTab === "chat" ? (
             messages.map((message) => (
               <MessageDisplay
@@ -363,9 +375,9 @@ export function AdvancedRagAssistant() {
         <div className="mb-8">
           <h3 className="mb-2 text-sm font-semibold text-gray-400">Sources</h3>
           <ul className="space-y-2">
-            {["Doc1", "Doc2", "Doc3"].map((doc) => (
+          {documents.map((doc, index) => (
               <li
-                key={doc}
+                key={index}
                 className="px-2 py-1 rounded hover:bg-gray-200 cursor-pointer"
               >
                 {doc}

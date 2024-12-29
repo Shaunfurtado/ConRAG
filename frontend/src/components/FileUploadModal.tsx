@@ -37,11 +37,7 @@ interface FileUploadModalProps {
               Supported formats: PNG, JPEG, PDF, TXT, Markdown
             </p>
           </div>
-          <div className="flex justify-between mt-4">
-            <Button variant="outline">Google Drive</Button>
-            <Button variant="outline">Paste Link</Button>
-            <Button variant="outline">Direct Input</Button>
-          </div>
+          
           <div className="mt-4 text-center">
             <Button
               variant="default"

@@ -123,16 +123,42 @@ app.post('/new-conversation', async (req: Request, res: Response) => {
   }
 });
 
-// Endpoint to retrieve document names for a specific session
-app.get('/documents/:sessionId', async (req: Request, res: Response) => {
-  const { sessionId } = req.params;
+
+app.get('/documents', async (req: Request, res: Response) => {
   try {
-    const rows = await ragSystem?.getDocumentNames(sessionId);
+    // Check if the RAG system is initialized
+    if (!ragSystem) {
+      return res.status(503).json({ error: 'RAG system is still initializing. Please try again later.' });
+    }
+
+    // Retrieve the current session ID
+    const sessionId = ragSystem.databaseService.getSessionId();
+
+    // Ensure the session ID is valid
+    if (!sessionId) {
+      return res.status(400).json({ error: 'No active session found' });
+    }
+
+    // Fetch document names using the current session ID
+    const rows = await ragSystem.getDocumentNames(sessionId);
+
+    // Respond with the document names
     res.json(rows);
   } catch (error) {
     res.status(500).json({ error: 'Failed to retrieve document names' });
   }
 });
+
+// Endpoint to retrieve document names for a specific session
+// app.get('/documents/:sessionId', async (req: Request, res: Response) => {
+//   const { sessionId } = req.params;
+//   try {
+//     const rows = await ragSystem?.getDocumentNames(sessionId);
+//     res.json(rows);
+//   } catch (error) {
+//     res.status(500).json({ error: 'Failed to retrieve document names' });
+//   }
+// });
 
 // Endpoint to retrieve all session IDs from the database
 app.get('/sessions', async (req: Request, res: Response) => {

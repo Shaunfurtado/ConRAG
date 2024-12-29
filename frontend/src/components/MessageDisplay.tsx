@@ -12,7 +12,7 @@ export type Message = {
   import { atomDark } from "react-syntax-highlighter/dist/esm/styles/prism";
   import remarkGfm from "remark-gfm";
   import { Volume2, AudioLines, ClipboardCopy, Check } from "lucide-react";
-  import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@radix-ui/react-tooltip";
+  import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "./ui/tooltip";
   import { Button } from "./ui/button";
   import { Avatar, AvatarImage, AvatarFallback } from "@radix-ui/react-avatar";  // Import the Message type
   
@@ -42,7 +42,7 @@ export type Message = {
         } mb-4`}
       >
         <div
-          className={`flex ${
+          className={`flex  ${
             message.sender === "user" ? "flex-row-reverse" : "flex-row"
           } items-start`}
         >

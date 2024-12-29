@@ -83,7 +83,12 @@ export default function Home() {
             What is ConRAG?
           </h2>
           <p className="text-xl text-gray-600 text-center max-w-3xl mx-auto">
-          ConRAG (Conversational Retrieval-Augmented Generation) combines advanced retrieval and generation techniques to deliver accurate, context-aware, and human-like responses. It streamlines workflows, enhances productivity, and provides seamless access to information through natural conversations and voice interactions. Perfect for customer support, research, and education.
+            ConRAG (Conversational Retrieval-Augmented Generation) combines
+            advanced retrieval and generation techniques to deliver accurate,
+            context-aware, and human-like responses. It streamlines workflows,
+            enhances productivity, and provides seamless access to information
+            through natural conversations and voice interactions. Perfect for
+            customer support, research, and education.
           </p>
         </div>
       </section>
@@ -151,6 +156,11 @@ export default function Home() {
           </div>
         </div>
       </section>
+      <footer className="bg-gray-800 text-white py-8">
+        <div className="container mx-auto px-4 text-center">
+          <p>&copy; 2024 ConRAG. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
   );
 }
