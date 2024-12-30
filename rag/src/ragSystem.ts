@@ -8,7 +8,7 @@ import { QueryResult } from './types';
 import { Logger } from './logger';
 import { Document } from './types';
 import { Express } from 'express';
-
+import { Profile,ProfileType, PROFILES } from './types/profile';
 export class RAGSystem {
   private documentLoader: DocumentLoader;
   public vectorStore: VectorStoreService;
@@ -16,8 +16,9 @@ export class RAGSystem {
   public databaseService: DatabaseService;
   private logger: Logger;
   private sessionId: string;
-
+  private currentProfile: Profile;
   constructor() {
+    this.currentProfile = PROFILES[0];
     this.documentLoader = new DocumentLoader();
     this.vectorStore = new VectorStoreService();
     this.llmService = new LLMService();
@@ -25,6 +26,17 @@ export class RAGSystem {
     this.logger = Logger.getInstance();
     this.sessionId = this.databaseService.getSessionId();
   }
+
+
+  async switchProfile(profileName: ProfileType): Promise<void> {
+    const profile = PROFILES.find(p => p.name === profileName);
+    if (!profile) {
+      throw new Error(`Invalid profile: ${profileName}`);
+    }
+    this.currentProfile = profile;
+    await this.logger.log('Profile switched', { profileName });
+  }
+
 
   async initialize(): Promise<void> {
     await this.logger.log('Initializing RAG system');
@@ -167,7 +179,7 @@ export class RAGSystem {
     const historyContext = this.formatConversationHistory(history);
 
     return `
-  You are a highly intelligent and precise AI assistant. Your job is to answer the user's question with high accuracy and relevance using the provided context, as well as leveraging your own knowledge to enhance the answer. If the information isn't available in the context, explicitly mention it.
+  ${this.currentProfile.systemPrompt}
 
   Context:
   ${context}

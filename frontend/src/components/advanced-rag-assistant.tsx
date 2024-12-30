@@ -10,6 +10,7 @@ import { InputArea } from "./InputArea";
 import { FileUploadModal } from "./FileUploadModal";
 import { SettingsModal } from "./SettingsModal";
 import { AvatarView } from "./AvatarView";
+import { ProfileType } from "./types/profle";
 
 declare global {
   interface Window {
@@ -30,7 +31,6 @@ type ChatHistory = {
 
 export function AdvancedRagAssistant() {
   const [activeTab, setActiveTab] = useState("chat");
-  const [activeProfile, setActiveProfile] = useState("General");
   const [isFileUploadOpen, setIsFileUploadOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [chatHistories, setChatHistories] = useState<ChatHistory[]>([]);
@@ -52,6 +52,7 @@ export function AdvancedRagAssistant() {
   );
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<FileList | null>(null);
+  const [activeProfile, setActiveProfile] = useState<ProfileType>('General');
 
   const fetchDocuments = async () => {
     try {
