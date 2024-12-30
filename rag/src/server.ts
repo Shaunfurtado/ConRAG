@@ -8,6 +8,7 @@ import { Logger } from './logger';
 import cors from 'cors';
 import multer from 'multer';
 import session from 'express-session';
+import { ProfileType } from './types/profile';
 
 const app = express();
 const port = 3001;
@@ -148,6 +149,27 @@ app.get('/documents', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to retrieve document names' });
   }
 });
+
+
+
+
+app.post('/switch-profile', async (req: Request, res: Response) => {
+  const { profileName } = req.body;
+  
+  if (!ragSystem) {
+    return res.status(503).json({ error: 'RAG system not initialized' });
+  }
+
+  try {
+    await ragSystem.switchProfile(profileName as ProfileType);
+    res.json({ message: `Switched to profile: ${profileName}` });
+  } catch (error) {
+    const logger = Logger.getInstance();
+    await logger.log('Error switching profile', error);
+    res.status(400).json({ error: `Failed to switch profile: ${(error as Error).message}` });
+  }
+});
+
 
 // Endpoint to retrieve document names for a specific session
 // app.get('/documents/:sessionId', async (req: Request, res: Response) => {
