@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="silk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConRAG</title>
+    <!-- Alpine.js Core -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Marked.js for Markdown Rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Tailwind CSS & DaisyUI CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        /* Custom scrollbar for chat */
+        #chat-messages::-webkit-scrollbar { width: 8px; }
+        #chat-messages::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        #chat-messages::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        #chat-messages::-webkit-scrollbar-thumb:hover { background: #555; }
+        /* Ensure layout fills height */
+        html, body { height: 100%; margin: 0; overflow: hidden; }
+        .main-layout { display: flex; height: 100vh; }
+        .sidebar { height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
+        .chat-area { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+        #chat-messages { flex-grow: 1; overflow-y: auto; }
+        .document-sidebar { height: 100%; overflow-y: auto; }
+        [x-cloak] { display: none !important; } /* Hide elements until Alpine initializes */
+
+        /* Custom Dark Theme based on your config */
+        [data-theme="custom"] {
+            --color-base-100: oklch(98% 0 0);
+            --color-base-200: oklch(96% 0.001 286.375);
+            --color-base-300: oklch(92% 0.004 286.32);
+            --color-base-content: oklch(21% 0.006 285.885);
+            --color-primary: oklch(71% 0.203 305.504);
+            --color-primary-content: oklch(29% 0.149 302.717);
+            --color-secondary: oklch(67% 0.182 276.935);
+            --color-secondary-content: oklch(25% 0.09 281.288);
+            --color-accent: oklch(70% 0.165 254.624);
+            --color-accent-content: oklch(28% 0.091 267.935);
+            --color-neutral: oklch(37% 0.013 285.805);
+            --color-neutral-content: oklch(98% 0 0);
+            --color-info: oklch(60% 0.126 221.723);
+            --color-info-content: oklch(98% 0.019 200.873);
+            --color-success: oklch(62% 0.194 149.214);
+            --color-success-content: oklch(98% 0.018 155.826);
+            --color-warning: oklch(68% 0.162 75.834);
+            --color-warning-content: oklch(98% 0.026 102.212);
+            --color-error: oklch(58% 0.253 17.585);
+            --color-error-content: oklch(96% 0.015 12.422);
+            --radius-selector: 2rem;
+            --radius-field: 0.5rem;
+            --radius-box: 1rem;
+            --size-selector: 0.25rem;
+            --size-field: 0.25rem;
+            --border: 1px;
+            --depth: 0;
+            --noise: 0;
+
+          /* Map relevant custom vars to DaisyUI vars */
+          --rounded-box: 1rem; /* From --radius-box */
+
+          /* You might need to map other vars like these: */
+          /* --rounded-btn: 0rem; */ /* From --radius-selector */
+          /* --rounded-input: 0rem; */ /* From --radius-field */
+          /* --border-btn: 1px; */ /* From --border */
+          /* etc. */
+        }
+    </style>
+</head>
+<body class="bg-base-200" x-data="chatApp()" x-init="init()" x-cloak>
+
+    <div class="main-layout">
+
+        <!-- Left Sidebar -->
+        <aside class="sidebar w-64 bg-base-100 p-4 space-y-6 text-base-content flex-shrink-0">
+            <!-- New Chat -->
+            <div>
+                <button
+                    class="btn btn-primary btn-block"
+                    @click="startNewChat()"
+                    :disabled="isLoading"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                    New Chat
+                </button>
+            </div>
+
+            <!-- Session History -->
+            <div class="flex-grow space-y-2 overflow-y-auto">
+                <h3 class="text-xs font-semibold uppercase text-base-content opacity-70 mb-2">Chat History</h3>
+                <div id="session-list">
+                     <span x-show="isLoadingSessions" class="loading loading-dots loading-sm"></span>
+                     <span x-show="isLoadingSessions && sessions.length === 0"> Loading sessions...</span>
+                     <template x-if="!isLoadingSessions && sessions.length === 0">
+                         <p class="text-xs text-base-content opacity-60">No chat history yet.</p>
+                     </template>
+                     <template x-for="session in sessions" :key="session.id">
+                        <button
+                            class="btn btn-ghost btn-sm justify-start w-full truncate text-left"
+                            :class="{ 'btn-active': currentSessionId === session.id }"
+                            @click="switchSession(session.id)"
+                            :disabled="isLoading"
+                        >
+                            <span x-text="session.id.substring(0, 8) + '...'"></span>
+                        </button>
+                     </template>
+                      <p x-show="sessionsError" class="text-error text-xs" x-text="sessionsError"></p>
+                </div>
+            </div>
+
+             <!-- General Loading Indicator (for sidebar actions) -->
+             <div x-show="isLoading" class="text-center p-1 text-xs text-info">
+                 <span class="loading loading-spinner loading-xs"></span> Processing...
+             </div>
+
+            <!-- Profile Selector -->
+            <div class="flex-shrink-0">
+                <h3 class="text-xs font-semibold uppercase text-base-content opacity-70 mb-2">Profile</h3>
+                <select id="profile-selector" class="select select-bordered w-full max-w-xs select-sm"
+                        x-model="selectedProfile"
+                        @change="switchProfile($event.target.value)"
+                        :disabled="isLoading">
+                    <option value="General">General</option>
+                    <option value="Tutor">Tutor</option>
+                    <option value="NotesPrep">NotesPrep</option>
+                    <option value="Research Ast">Research Ast</option>
+                </select>
+                <div id="profile-status" class="text-xs mt-1" :class="profileStatus.isError ? 'text-error' : 'text-success'" x-text="profileStatus.message"></div>
+            </div>
+
+            <!-- Model Selector -->
+            <div class="flex-shrink-0">
+                <h3 class="text-xs font-semibold uppercase text-base-content opacity-70 mb-2">Model</h3>
+                <select id="model-selector" class="select select-bordered w-full max-w-xs select-sm"
+                        x-model="selectedModel"
+                        @change="switchModel($event.target.value)"
+                        :disabled="isLoading">
+                     <option value="gemini">Gemini</option>
+                     <option value="ollama">Ollama</option>
+                     <option value="metaai">Meta AI</option>
+                </select>
+                 <div id="model-status" class="text-xs mt-1" :class="modelStatus.isError ? 'text-error' : 'text-success'" x-text="modelStatus.message"></div>
+            </div>
+        </aside>
+
+        <!-- Center Chat Area -->
+        <main class="chat-area flex-1 bg-base-200">
+            <!-- Chat Messages -->
+            <div id="chat-messages" class="p-4 space-y-4" x-ref="chatMessages">
+                <!-- Initial State Messages - Updated Logic -->
+                 <template x-if="!currentSessionId && !isChatLoading">
+                    <div class="text-center text-base-content opacity-60 mt-10">
+                       Start a new chat or select a previous one from the history.
+                    </div>
+                 </template>
+                 <template x-if="currentSessionId && messages.length === 0 && documents.length === 0 && !isChatLoading">
+                    <div class="text-center text-base-content opacity-60 mt-10">
+                       Conversation selected. Please upload at least one document to begin chatting.
+                    </div>
+                 </template>
+                 <template x-if="currentSessionId && messages.length === 0 && documents.length > 0 && !isChatLoading">
+                    <div class="text-center text-base-content opacity-60 mt-10">
+                       Conversation selected and documents are loaded. You can now start asking questions.
+                    </div>
+                 </template>
+                 <!-- Removed the generic 'Conversation loaded' message as the above cover the initial states -->
+
+                <!-- Chat Bubbles -->
+                <template x-for="(msg, index) in messages" :key="index">
+                    <div class="chat" :class="msg.role === 'user' ? 'chat-end' : 'chat-start'">
+                        <!-- Message container with bubble and actions -->
+                        <div class="flex flex-col">
+                            <div class="chat-bubble prose" :class="{ /* Added 'prose' for basic markdown styling */
+                                'chat-bubble-primary': msg.role === 'user',
+                                'chat-bubble-secondary': msg.role === 'assistant',
+                                'chat-bubble-error': msg.isError
+                            }">
+                                <!-- Message content with markdown rendering -->
+                                <span x-html="renderMarkdown(msg.content)"></span>
+                                
+                                <template x-if="msg.sources && msg.sources.length > 0">
+                                    <!-- Improved source display -->
+                                    <span class="block text-xs opacity-70 mt-1">
+                                        Sources:
+                                        <template x-for="(source, idx) in msg.sources" :key="idx">
+                                            <span x-text="source.metadata?.file_name || 'Unknown'" :data-tip="source.metadata?.file_path || ''"></span><span x-show="idx < msg.sources.length - 1">, </span>
+                                        </template>
+                                    </span>
+                                </template>
+                            </div>
+
+                            <!-- Action buttons below chat bubble - for both user and assistant messages -->
+                            <div :class="msg.role === 'user' ? 'flex gap-2 mt-1 justify-end opacity-70 hover:opacity-100' : 'flex gap-2 mt-1 justify-start opacity-70 hover:opacity-100'">
+                                <!-- Copy to clipboard button with tooltip -->
+                                <div :class="msg.role === 'user' ? 'tooltip tooltip-left' : 'tooltip tooltip-right'" data-tip="Copy to clipboard">
+                                    <button class="btn btn-xs btn-circle btn-ghost" @click="copyToClipboard(msg.content)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                
+                                <!-- Text-to-speech button with tooltip -->
+                                <div :class="msg.role === 'user' ? 'tooltip tooltip-left' : 'tooltip tooltip-right'" data-tip="Read aloud">
+                                    <button class="btn btn-xs btn-circle btn-ghost" @click="speakText(msg.content)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Thinking Indicator -->
+                <div x-show="isChatLoading" class="chat chat-start">
+                    <div class="chat-bubble chat-bubble-secondary"> <!-- Style thinking bubble like assistant -->
+                         <span class="loading loading-dots loading-md"></span> Thinking...
+                    </div>
+                </div>
+
+                 <!-- Chat Error Display -->
+                 <p x-show="chatError" class="text-error text-sm p-2" x-text="chatError"></p>
+            </div>
+
+            <!-- Chat Input Form -->
+            <div class="p-4 border-t border-base-300 bg-base-100 flex-shrink-0">
+                <form id="chat-form" @submit.prevent="submitQuery()">
+                    <div class="flex items-end space-x-2">
+                        <textarea name="question"
+                                  x-model="newQuestion"
+                                  class="textarea textarea-bordered w-full resize-none"
+                                  placeholder="Type your message..."
+                                  rows="1"
+                                  @input="adjustTextareaHeight($el)"
+                                  @keydown.enter.prevent.stop="submitQuery()"
+                                  required
+                                  ></textarea>
+                        <button type="submit" class="btn btn-primary btn-square" >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+                            </svg>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </main>
+
+        <!-- Right Document Sidebar -->
+        <aside class="document-sidebar w-72 bg-base-100 p-4 space-y-4 border-l border-base-300 flex-shrink-0">
+            <h3 class="text-sm font-semibold uppercase text-base-content opacity-70">Documents</h3>
+
+            <!-- Document Upload -->
+            <form id="upload-form" @submit.prevent="uploadFiles($refs.fileInput.files)">
+                 <input type="file" name="files" multiple class="file-input file-input-bordered file-input-sm w-full max-w-xs mb-2" required x-ref="fileInput">
+                 <button type="submit" class="btn btn-secondary btn-sm btn-block" >
+                    <template x-if="!isUploading">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" /></svg>
+                    </template>
+                    <span x-show="isUploading" class="loading loading-spinner loading-xs"></span>
+                     <span x-text="isUploading ? 'Uploading...' : 'Upload'"></span>
+                 </button>
+                 <div id="document-status" class="text-xs mt-1" :class="documentStatus.isError ? 'text-error' : 'text-success'" x-text="documentStatus.message"></div>
+            </form>
+
+            <!-- Uploaded Document List -->
+             <div id="uploaded-documents" class="space-y-1 text-sm">
+                 <span x-show="isLoadingDocuments" class="loading loading-dots loading-sm"></span>
+                 <span x-show="isLoadingDocuments && documents.length === 0"> Loading documents...</span>
+
+                 <template x-if="!isLoadingDocuments && documents.length === 0 && currentSessionId">
+                     <p class="text-xs text-base-content opacity-60">No documents uploaded for this session.</p>
+                 </template>
+                 <template x-if="!isLoadingDocuments && !currentSessionId && !isUploading">
+                     <p class="text-xs text-base-content opacity-60">Select or start a chat to manage documents.</p>
+                 </template>
+
+                 <template x-for="doc in documents" :key="doc.file_name"> <!-- Assume file_name is unique enough for key -->
+                     <div class="bg-base-300 p-1.5 rounded text-xs flex items-center space-x-1">
+                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
+                         <span class="truncate flex-grow" :title="doc.file_name" x-text="doc.file_name"></span>
+                         <!-- Add delete button if backend supports it -->
+                         <!-- <button @click="deleteDocument(doc.file_name)" class="text-error hover:text-error-focus">X</button> -->
+                     </div>
+                 </template>
+                 <p x-show="documentsError" class="text-error text-xs" x-text="documentsError"></p>
+            </div>
+            <div x-data="{
+                themes: [
+                  'default', 'dark', 'light', 'cupcake', 'bumblebee', 'emerald', 'corporate', 'retro', 'cyberpunk', 'valentine', 'halloween', 'garden', 'forest', 'aqua', 'lofi', 'pastel', 'fantasy', 'wireframe', 'black', 'luxury', 'dracula', 'cyborg', 'synthwave', 'night', 'sunset', 'amnesia'
+                ],
+                selectedTheme: 'default'
+              }" class="dropdown mb-72">
+              <div tabindex="0" role="button" class="btn m-1" x-text="'Theme: ' + selectedTheme">
+                Theme
+                <svg
+                  width="12px"
+                  height="12px"
+                  class="inline-block h-2 w-2 fill-current opacity-60"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 2048 2048"
+                >
+                  <path d="M1799 349l242 241-1017 1017L7 590l242-241 775 775 775-775z"></path>
+                </svg>
+              </div>
+              <ul tabindex="0" class="dropdown-content bg-base-300 rounded-box z-1 w-52 p-2 shadow-2xl">
+                <template x-for="theme in themes" :key="theme">
+                  <li>
+                    <input
+                      type="radio"
+                      name="theme-dropdown"
+                      class="theme-controller w-full btn btn-sm btn-block btn-ghost justify-start"
+                      :aria-label="theme"
+                      :value="theme"
+                      x-model="selectedTheme"
+                    />
+                  </li>
+                </template>
+              </ul>
+            </div>
+        </aside>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const themeRadios = document.querySelectorAll('input[name="theme-dropdown"]');
+            themeRadios.forEach(radio => {
+              radio.addEventListener('change', (event) => {
+                document.documentElement.setAttribute('data-theme', event.target.value);
+                // Optionally save to local storage
+                localStorage.setItem('theme', event.target.value);
+              });
+            });
+      
+            // Load theme from local storage if available
+            const storedTheme = localStorage.getItem('theme');
+            if (storedTheme) {
+              document.documentElement.setAttribute('data-theme', storedTheme);
+              const radioToSelect = document.querySelector(`input[name="theme-dropdown"][value="${storedTheme}"]`);
+              if (radioToSelect) {
+                radioToSelect.checked = true;
+                const dropdownDiv = document.querySelector('.dropdown');
+                if (dropdownDiv && dropdownDiv.__x) {
+                  dropdownDiv.__x.model.set(storedTheme);
+                }
+              }
+            }
+          });
+        // --- Utility Functions ---
+        function escapeHtml(unsafe) {
+            if (typeof unsafe !== 'string') return unsafe;
+            // Basic escaping, consider a more robust library for production if complex HTML is possible in responses
+             return unsafe
+                  .replace(/&/g, "&") // Must be first
+                  .replace(/</g, "<")
+                  .replace(/>/g, ">")
+                  .replace(/"/g, "\"")
+                  .replace(/'/g, "'");
+        }
+
+        // Function to render Markdown using marked.js
+        function renderMarkdown(markdownString) {
+            if (typeof markdownString !== 'string') return markdownString;
+            // Use marked.parse() with basic sanitization enabled
+            // Consider adding DOMPurify for more robust sanitization if needed:
+            // import DOMPurify from 'dompurify';
+            // return DOMPurify.sanitize(marked.parse(markdownString, { breaks: true, gfm: true, sanitize: true }));
+            // For now, using marked's built-in (though limited) sanitize option
+            return marked.parse(markdownString, {
+                breaks: true, // Convert single line breaks to <br>
+                gfm: true,    // Enable GitHub Flavored Markdown
+                sanitize: true // Basic sanitization (deprecated in newer versions, consider DOMPurify)
+            });
+        }
+
+
+        function scrollToBottom(element) {
+            if (element) {
+                element.scrollTop = element.scrollHeight;
+            }
+        }
+
+        // --- Alpine.js Component ---
+        function chatApp() {
+            return {
+                // --- State Properties ---
+                baseURL: 'http://localhost:3001',
+                currentSessionId: null,
+                sessions: [],          // { id: string }[]
+                messages: [],          // { role: 'user' | 'assistant', content: string, sources?: any[], isError?: boolean }[]
+                documents: [],         // { file_name: string, other_metadata?: any }[]
+                selectedProfile: 'General', // Default or fetch initial
+                selectedModel: 'gemini',     // Default or fetch initial
+                newQuestion: '',
+
+                // Loading States
+                isLoading: false,          // General loading for sidebar actions etc.
+                isLoadingSessions: false,
+                isLoadingHistory: false,
+                isChatLoading: false,     // Specifically for AI response
+                isUploading: false,
+                isLoadingDocuments: false,
+
+                // Status/Error Messages
+                profileStatus: { message: '', isError: false },
+                modelStatus: { message: '', isError: false },
+                documentStatus: { message: '', isError: false },
+                sessionsError: '',
+                documentsError: '',
+                chatError: '',
+
+                // --- Initialization ---
+                init() {
+                    console.log("RAG Chat UI (Alpine.js) Initializing...");
+                    this.loadSessions();
+                    // Automatically start a new session when the page loads
+                    this.startNewChat();
+                },
+
+                // --- API Interaction Helper ---
+                async fetchApi(endpoint, options = {}, loadingIndicatorProp = 'isLoading') {
+                    this[loadingIndicatorProp] = true;
+                    let statusProp = null; // e.g., 'profileStatus', 'modelStatus'
+                    if (options.statusProp) {
+                        statusProp = options.statusProp;
+                        this[statusProp] = { message: '', isError: false }; // Clear previous status
+                        delete options.statusProp;
+                    }
+
+                    try {
+                        const response = await fetch(`${this.baseURL}${endpoint}`, options);
+                        const responseData = await response.json(); // Assume JSON response
+
+                        if (!response.ok) {
+                             throw new Error(responseData.error || responseData.message || `HTTP error! Status: ${response.status}`);
+                        }
+
+                        if (statusProp) {
+                            this[statusProp] = { message: responseData.message || 'Operation successful.', isError: false };
+                            this.clearStatus(statusProp, 3000);
+                        }
+                        return responseData; // Return data on success
+
+                    } catch (error) {
+                        console.error(`API Error (${endpoint}):`, error);
+                        const errorMessage = error.message || 'An unexpected error occurred.';
+                        if (statusProp) {
+                            this[statusProp] = { message: `Error: ${errorMessage}`, isError: true };
+                             this.clearStatus(statusProp, 5000); // Keep error longer
+                        } else {
+                            // Handle errors for non-status updates (e.g., chat, sessions)
+                            if (loadingIndicatorProp === 'isChatLoading') this.chatError = errorMessage;
+                            if (loadingIndicatorProp === 'isLoadingSessions') this.sessionsError = `Failed to load sessions: ${errorMessage}`;
+                            if (loadingIndicatorProp === 'isLoadingDocuments') this.documentsError = `Failed to load documents: ${errorMessage}`;
+                            // Add more specific error handling if needed
+                        }
+                        return null; // Indicate failure
+                    } finally {
+                        this[loadingIndicatorProp] = false;
+                    }
+                },
+
+                // --- Session Management ---
+                async loadSessions() {
+                    this.sessionsError = '';
+                    const data = await this.fetchApi('/sessions', {}, 'isLoadingSessions');
+                    if (data && data.sessionIds) {
+                        // Map to objects expected by x-for key binding if needed
+                        this.sessions = data.sessionIds.map(id => ({ id }));
+                        // If no session is active and there are sessions, maybe select the first? Or leave as is.
+                    } else if (!this.sessionsError) {
+                        this.sessionsError = 'Failed to parse session data.';
+                    }
+                },
+
+                async startNewChat() {
+                    this.chatError = '';
+                    const data = await this.fetchApi('/new-conversation', { method: 'POST', statusProp: 'profileStatus' }); // Reuse profile status briefly
+                    if (data) {
+                        this.currentSessionId = data.sessionId; // Assuming backend returns the new ID
+                        this.messages = [];
+                        this.documents = []; // Clear documents for the new session
+                        this.documentsError = '';
+                        this.documentStatus = { message: '', isError: false };
+                        this.profileStatus = { message: 'New chat started. Please upload at least one document to begin.', isError: false }; // More specific message
+                        this.clearStatus('profileStatus', 5000);
+                        await this.loadSessions(); // Refresh session list
+                        // Since it's new, loadDocuments will likely return empty, but call for consistency
+                        await this.loadDocuments();
+                        this.scrollToChatBottom();
+                    }
+                },
+
+                async switchSession(sessionId) {
+                    if (this.currentSessionId === sessionId) return; // Don't reload if already active
+                    this.chatError = '';
+                    this.documentsError = '';
+                    const data = await this.fetchApi(`/switch-conversation/${sessionId}`, { method: 'POST', statusProp: 'profileStatus' }); // Reuse profile status
+                    if (data) {
+                        this.currentSessionId = sessionId;
+                        this.profileStatus = { message: `Switched to session ${sessionId.substring(0, 8)}...`, isError: false };
+                        this.clearStatus('profileStatus');
+                        await this.loadChatHistory(sessionId);
+                        await this.loadDocuments(); // Load documents for the selected session
+                        this.loadSessions(); // Refresh to update active state (ensure btn-active class updates)
+                    }
+                 },
+
+                async loadChatHistory(sessionId) {
+                     this.chatError = '';
+                     const data = await this.fetchApi(`/conversations/${sessionId}`, {}, 'isLoadingHistory'); // Could use isChatLoading too
+                     if (data && data.conversations) {
+                         this.messages = this.formatHistory(data.conversations);
+                         this.scrollToChatBottom();
+                     } else if (!this.chatError) {
+                         this.chatError = `Failed to load conversation for session ${sessionId.substring(0,8)}...`;
+                         this.messages = []; // Clear messages on error
+                     }
+                 },
+
+                formatHistory(conversations) {
+                    // Transform backend history format into the { role, content, sources } format
+                    const formatted = [];
+                    conversations.forEach(conv => {
+                         if (conv.question) {
+                             formatted.push({ role: 'user', content: conv.question });
+                         }
+                         if (conv.answer) {
+                            // Simple source extraction (adjust if backend format differs)
+                            let answerText = conv.answer;
+                            let sources = [];
+                            const sourceMatch = answerText.match(/\(Source[s]*: (.*?)\)$/);
+                             if (sourceMatch && sourceMatch[1]) {
+                                 // Assuming sources are comma-separated filenames in the match
+                                 // You might need more robust parsing based on actual backend output
+                                 const sourceNames = sourceMatch[1].split(',').map(s => s.trim());
+                                 sources = sourceNames.map(name => ({ metadata: { file_name: name } })); // Mimic expected structure
+                                 answerText = answerText.substring(0, sourceMatch.index).trim();
+                             }
+                             formatted.push({ role: 'assistant', content: answerText, sources: sources });
+                         }
+                    });
+                    return formatted;
+                },
+
+                // --- Chat Interaction ---
+                // Send a query to the RAG system
+                async submitQuery() {
+                    if (!this.newQuestion.trim()) return;
+                    this.chatError = '';
+                    
+                    // Add user message to chat
+                    const userMessage = this.newQuestion;
+                    this.messages.push({ role: 'user', content: userMessage });
+                    this.newQuestion = '';
+                    this.isChatLoading = true;
+                    this.scrollToChatBottom();
+                    
+                    try {
+                        const response = await fetch(`${this.baseURL}/query`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ question: userMessage })
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+
+                        const data = await response.json();
+                        this.messages.push({ role: 'assistant', content: data.answer });
+                        
+                        // After the first query following a file upload, update documents and sessions
+                        this.loadDocuments();
+                        
+                        // Update the session list
+                        await this.loadSessions();
+                        
+                        // Get current session ID from the server
+                        const currentSessionResponse = await fetch(`${this.baseURL}/current-session`);
+                        if (currentSessionResponse.ok) {
+                            const currentSessionData = await currentSessionResponse.json();
+                            if (currentSessionData.sessionId && this.currentSessionId !== currentSessionData.sessionId) {
+                                this.currentSessionId = currentSessionData.sessionId;
+                            }
+                        }
+                        
+                        this.scrollToChatBottom();
+                    } catch (error) {
+                        console.error('Error querying RAG system:', error);
+                        this.messages.push({ role: 'assistant', content: 'Sorry, an error occurred while processing your request.', isError: true });
+                        this.chatError = `Error: ${error.message}`;
+                    } finally {
+                        this.isChatLoading = false;
+                        this.scrollToChatBottom();
+                    }
+                },
+
+                appendUserMessage(question) {
+                    this.messages.push({ role: 'user', content: question });
+                    this.scrollToChatBottom();
+                },
+
+                appendAiMessage(answer, sources = []) {
+                     // Basic source extraction from text if not provided structured
+                     let answerText = answer;
+                     let extractedSources = sources; // Use provided sources if available
+                     if (!extractedSources || extractedSources.length === 0) {
+                        const sourceMatch = answerText.match(/\(Source[s]*: (.*?)\)$/);
+                         if (sourceMatch && sourceMatch[1]) {
+                             const sourceNames = sourceMatch[1].split(',').map(s => s.trim());
+                             extractedSources = sourceNames.map(name => ({ metadata: { file_name: name } }));
+                             answerText = answerText.substring(0, sourceMatch.index).trim();
+                         }
+                     }
+
+                    this.messages.push({ role: 'assistant', content: answerText, sources: extractedSources });
+                    this.scrollToChatBottom();
+                },
+
+                 appendErrorMessage(message) {
+                    this.messages.push({ role: 'assistant', content: message, isError: true });
+                    this.scrollToChatBottom();
+                },
+
+                // --- Profile & Model Switching ---
+                async switchProfile(profileName) {
+                    this.selectedProfile = profileName; // Update selection immediately
+                    await this.fetchApi('/switch-profile', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ profileName: profileName }),
+                        statusProp: 'profileStatus'
+                    });
+                },
+
+                async switchModel(modelName) {
+                     this.selectedModel = modelName; // Update selection immediately
+                     await this.fetchApi('/switch-llm-model', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ modelName: modelName }),
+                        statusProp: 'modelStatus'
+                    });
+                },
+
+                // Send a message to the RAG system
+                async sendMessage() {
+                    if (!this.currentMessage.trim()) return;
+
+                    const userMessage = this.currentMessage;
+                    this.messages.push({ role: 'user', content: userMessage });
+                    this.currentMessage = '';
+                    this.isLoading = true;
+
+                    try {
+                        const response = await fetch(`${this.baseURL}/query`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ question: userMessage })
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+
+                        const data = await response.json();
+                        this.messages.push({ role: 'assistant', content: data.answer });
+                        
+                        // After the first query following a file upload, update documents and sessions
+                        this.loadDocuments();
+                        
+                        // Update the session list and switch to current session
+                        const sessionsResponse = await fetch(`${this.baseURL}/sessions`);
+                        if (sessionsResponse.ok) {
+                            const sessionsData = await sessionsResponse.json();
+                            this.sessions = sessionsData.sessionIds || [];
+                            
+                            // Get current session ID from the server
+                            const currentSessionResponse = await fetch(`${this.baseURL}/current-session`);
+                            if (currentSessionResponse.ok) {
+                                const currentSessionData = await currentSessionResponse.json();
+                                if (currentSessionData.sessionId) {
+                                    this.currentSessionId = currentSessionData.sessionId;
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        this.messages.push({
+                            role: 'assistant',
+                            content: 'Sorry, there was an error processing your request.'
+                        });
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+
+                // --- Document Handling ---
+                async loadDocuments() {
+                    if (!this.currentSessionId) {
+                        this.documents = [];
+                        this.documentsError = '';
+                        return; // No session, nothing to load
+                    }
+                    this.documentsError = '';
+                    const data = await this.fetchApi(`/documents`, {}, 'isLoadingDocuments'); // Assumes GET /documents uses current session from backend state
+                    if (data && Array.isArray(data)) {
+                        this.documents = data;
+                    } else if (!this.documentsError) {
+                        this.documentsError = 'Failed to parse document list.';
+                        this.documents = [];
+                    }
+                },
+
+                // Document Upload
+                async uploadFiles(files) {
+                    if (!files || files.length === 0) return;
+                    {{/*  if (!this.currentSessionId) {
+                        this.documentStatus = { message: 'Please start a new chat first.', isError: true };
+                        this.clearStatus('documentStatus', 3000);
+                        return;
+                    }  */}}
+
+                    this.isUploading = true;
+                    this.documentStatus = { message: '', isError: false };
+                    
+                    // Store file names immediately in a temporary array
+                    const uploadedFileNames = Array.from(files).map(file => ({ file_name: file.name }));
+                    
+                    // Add these files to documents array immediately
+                    this.documents = [...this.documents, ...uploadedFileNames];
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('sessionId', this.currentSessionId);
+                        for (let i = 0; i < files.length; i++) {
+                            formData.append('files', files[i]);
+                        }
+
+                        const response = await fetch(`${this.baseURL}/upload`, {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const data = await response.json();
+                        if (!response.ok) {
+                            throw new Error(data.error || data.message || `HTTP error! Status: ${response.status}`);
+                        }
+
+                        this.documentStatus = { message: `${files.length} file(s) uploaded successfully.`, isError: false };
+                        this.clearStatus('documentStatus', 3000);
+                        
+                        // After successful upload, refresh the documents list from server
+                        // This will replace our temporary entries with the actual data
+                        await this.loadDocuments();
+                        
+                    } catch (error) {
+                        console.error('Upload Error:', error);
+                        this.documentStatus = { message: `Error: ${error.message}`, isError: true };
+                        this.clearStatus('documentStatus', 5000);
+                        
+                        // Remove the temporary entries if upload failed
+                        await this.loadDocuments();
+                    } finally {
+                        this.isUploading = false;
+                        // Clear the file input
+                        if (this.$refs.fileInput) {
+                            this.$refs.fileInput.value = '';
+                        }
+                    }
+                },
+
+                // Copy to clipboard function
+                copyToClipboard(text) {
+                    // Strip markdown formatting for cleaner clipboard content
+                    const tempElement = document.createElement('div');
+                    tempElement.innerHTML = marked.parse(text);
+                    const plainText = tempElement.textContent || tempElement.innerText || '';
+                    
+                    navigator.clipboard.writeText(plainText).then(() => {
+                        // You could add a toast notification here if you want
+                        console.log('Text copied to clipboard');
+                    }).catch(err => {
+                        console.error('Failed to copy text: ', err);
+                    });
+                },
+                
+                // Text-to-speech function
+                speakText(text) {
+                    if (!('speechSynthesis' in window)) {
+                        console.error('Text-to-speech not supported in this browser');
+                        return;
+                    }
+                    
+                    // Cancel any ongoing speech
+                    window.speechSynthesis.cancel();
+                    
+                    // Strip markdown formatting for cleaner speech
+                    const tempElement = document.createElement('div');
+                    tempElement.innerHTML = marked.parse(text);
+                    const plainText = tempElement.textContent || tempElement.innerText || '';
+                    
+                    const utterance = new SpeechSynthesisUtterance(plainText);
+                    
+                    // Get available voices and set a female voice if available
+                    const voices = window.speechSynthesis.getVoices();
+                    if (voices.length > 0) {
+                        // Try to find a female voice
+                        const femaleVoice = voices.find(voice => 
+                            voice.name.toLowerCase().includes('female') || 
+                            voice.name.toLowerCase().includes('woman') ||
+                            voice.name.toLowerCase().includes('girl') ||
+                            voice.name.includes('Microsoft Zira')
+                        );
+                        
+                        if (femaleVoice) {
+                            utterance.voice = femaleVoice;
+                        }
+                    }
+                    
+                    // Set other properties
+                    utterance.pitch = 1;
+                    utterance.rate = 1;
+                    utterance.volume = 1;
+                    
+                    // Speak the text
+                    window.speechSynthesis.speak(utterance);
+                },
+
+                // --- UI Helpers ---
+                 adjustTextareaHeight(el) {
+                    el.style.height = 'auto'; // Temporarily shrink
+                    el.style.height = `${el.scrollHeight}px`; // Set to scroll height
+                 },
+
+                scrollToChatBottom() {
+                     // Use $nextTick to wait for Alpine to update the DOM
+                     this.$nextTick(() => {
+                         scrollToBottom(this.$refs.chatMessages);
+                     });
+                },
+
+                clearStatus(statusProp, delay = 3000) {
+                     setTimeout(() => {
+                         if (this[statusProp]) {
+                             this[statusProp] = { message: '', isError: false };
+                         }
+                     }, delay);
+                },
+
+                // Expose escapeHtml if needed in templates directly (though better handled in JS)
+                escapeHtml: escapeHtml
+            }
+        }
+    </script>
+
+</body>
+</html>

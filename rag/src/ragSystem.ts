@@ -13,20 +13,29 @@ export class RAGSystem {
   private documentLoader: DocumentLoader;
   public vectorStore: VectorStoreService;
   private llmService: LLMService;
-  public databaseService: DatabaseService;
+  public databaseService: DatabaseService; // Make it public if accessed directly from server.ts
   private logger: Logger;
   private sessionId: string;
   private currentProfile: Profile;
-  constructor() {
+  constructor(databaseService: DatabaseService) { // Accept DatabaseService instance
     this.currentProfile = PROFILES[0];
     this.documentLoader = new DocumentLoader();
     this.vectorStore = new VectorStoreService();
     this.llmService = new LLMService();
-    this.databaseService = new DatabaseService();
+    this.databaseService = databaseService; // Use the provided instance
     this.logger = Logger.getInstance();
+    // Get initial session ID from the passed databaseService instance
     this.sessionId = this.databaseService.getSessionId();
   }
 
+  async initialize(): Promise<void> {
+    await this.logger.log('Initializing RAG system components');
+    // Database is already initialized externally
+    // Initialize vector store with the current session ID from databaseService
+    this.sessionId = this.databaseService.getSessionId(); // Ensure sessionId is current
+    await this.vectorStore.initialize(this.sessionId);
+    await this.logger.log('RAG system components initialization complete');
+  }
 
   async switchProfile(profileName: ProfileType): Promise<void> {
     const profile = PROFILES.find(p => p.name === profileName);
@@ -38,12 +47,12 @@ export class RAGSystem {
   }
 
 
-  async initialize(): Promise<void> {
-    await this.logger.log('Initializing RAG system');
-    await this.databaseService.initialize();
-    await this.vectorStore.initialize(this.sessionId);
-    await this.logger.log('RAG system initialization complete');
-  }
+  // async initialize(): Promise<void> {
+  //   await this.logger.log('Initializing RAG system');
+  //   await this.databaseService.initialize();
+  //   await this.vectorStore.initialize(this.sessionId);
+  //   await this.logger.log('RAG system initialization complete');
+  // }
 
   async saveDocuments(files: Express.Multer.File[]): Promise<void> {
     await this.logger.log('Processing document upload');
@@ -265,12 +274,15 @@ export class RAGSystem {
     }
 }
 
-  async startNewConversation(): Promise<void> {
+  async startNewConversation(): Promise<string> { // Return the new session ID
     await this.logger.log('Starting new conversation');
     try {
+        // Use the databaseService instance to start a new session
         this.sessionId = await this.databaseService.startNewSession();
+        // Re-initialize vector store for the new session
         await this.vectorStore.initialize(this.sessionId);
         await this.logger.log('New conversation started', { sessionId: this.sessionId });
+        return this.sessionId; // Return the new ID
     } catch (error) {
         await this.logger.log('Error starting new conversation', error);
         throw new Error('Failed to start new conversation');

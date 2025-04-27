@@ -47,7 +47,7 @@ export class LLMService {
 
     if (this.currentModel === 'gemini') {
       await this.logger.log('Using Gemini API');
-      const geminiModel = this.gemini.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const geminiModel = this.gemini.getGenerativeModel({ model: 'gemini-2.0-flash' });
       const result = await geminiModel.generateContent(prompt);
       response = (await result.response.text()).trim();
     } else if (this.currentModel === 'ollama') {
