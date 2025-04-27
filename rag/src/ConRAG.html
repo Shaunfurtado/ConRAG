@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="silk">
+<html lang="en" data-theme="custom">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,45 +27,36 @@
         .document-sidebar { height: 100%; overflow-y: auto; }
         [x-cloak] { display: none !important; } /* Hide elements until Alpine initializes */
 
-        /* Custom Dark Theme based on your config */
+        /* Custom Theme based on your config For the ConRAG AI Chat UI */
         [data-theme="custom"] {
-            --color-base-100: oklch(98% 0 0);
-            --color-base-200: oklch(96% 0.001 286.375);
-            --color-base-300: oklch(92% 0.004 286.32);
-            --color-base-content: oklch(21% 0.006 285.885);
-            --color-primary: oklch(71% 0.203 305.504);
-            --color-primary-content: oklch(29% 0.149 302.717);
-            --color-secondary: oklch(67% 0.182 276.935);
-            --color-secondary-content: oklch(25% 0.09 281.288);
-            --color-accent: oklch(70% 0.165 254.624);
-            --color-accent-content: oklch(28% 0.091 267.935);
-            --color-neutral: oklch(37% 0.013 285.805);
-            --color-neutral-content: oklch(98% 0 0);
-            --color-info: oklch(60% 0.126 221.723);
-            --color-info-content: oklch(98% 0.019 200.873);
-            --color-success: oklch(62% 0.194 149.214);
-            --color-success-content: oklch(98% 0.018 155.826);
-            --color-warning: oklch(68% 0.162 75.834);
-            --color-warning-content: oklch(98% 0.026 102.212);
-            --color-error: oklch(58% 0.253 17.585);
-            --color-error-content: oklch(96% 0.015 12.422);
-            --radius-selector: 2rem;
-            --radius-field: 0.5rem;
-            --radius-box: 1rem;
-            --size-selector: 0.25rem;
-            --size-field: 0.25rem;
-            --border: 1px;
-            --depth: 0;
-            --noise: 0;
-
-          /* Map relevant custom vars to DaisyUI vars */
-          --rounded-box: 1rem; /* From --radius-box */
-
-          /* You might need to map other vars like these: */
-          /* --rounded-btn: 0rem; */ /* From --radius-selector */
-          /* --rounded-input: 0rem; */ /* From --radius-field */
-          /* --border-btn: 1px; */ /* From --border */
-          /* etc. */
+            --color-base-100: oklch(98% 0 0); /* Very light background */
+            --color-base-200: oklch(97% 0.001 286.375); /* Slightly darker shade for subtle contrast */
+            --color-base-300: oklch(95% 0.002 286.32); /* Even slightly darker for borders or separators */
+            --color-base-content: oklch(25% 0.005 285.885); /* Darker text for readability */
+            --color-primary: oklch(55% 0.15 210); /* A muted blue or similar for primary actions */
+            --color-primary-content: oklch(98% 0 0); /* Light text on primary color */
+            --color-secondary: oklch(60% 0.10 240); /* A slightly different muted color for secondary actions */
+            --color-secondary-content: oklch(98% 0 0); /* Light text on secondary color */
+            --color-accent: oklch(65% 0.12 150); /* A subtle accent color */
+            --color-accent-content: oklch(98% 0 0); /* Light text on accent color */
+            --color-neutral: oklch(40% 0.008 285.805); /* A medium gray for less prominent text or elements */
+            --color-neutral-content: oklch(96% 0 0); /* Light text on neutral color */
+            --color-info: oklch(65% 0.10 200); /* A light blue for information */
+            --color-info-content: oklch(98% 0 0); /* Light text on info color */
+            --color-success: oklch(65% 0.15 160); /* A light green for success */
+            --color-success-content: oklch(98% 0 0); /* Light text on success color */
+            --color-warning: oklch(65% 0.15 80); /* A light yellow or orange for warnings */
+            --color-warning-content: oklch(30% 0.005 80); /* Darker text on warning color for contrast */
+            --color-error: oklch(60% 0.20 20); /* A light red for errors */
+            --color-error-content: oklch(98% 0 0); /* Light text on error color */
+            --radius-selector: 0.3rem; /* More subtle rounded corners */
+            --radius-field: 0.2rem;
+            --radius-box: 0.4rem;
+            --size-selector: 0.1rem; /* Smaller sizes for a cleaner look */
+            --size-field: 0.1rem;
+            --border: 1px; /* Thin borders */
+            --depth: 0; /* Minimal shadow */
+            --noise: 0; /* No noise or texture */
         }
     </style>
 </head>
